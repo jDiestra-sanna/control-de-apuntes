@@ -31,21 +31,12 @@
     .cat-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle}
     .badge-pill{border-radius:999px}
 
-    /* Fecha en blanco y totalmente visible */
+    /* Fecha en blanco y visible */
     .note-card .text-muted.small{ color:#ffffff !important; opacity:1 !important; }
 
-    /* Acciones de la nota: orden, espacios y responsive */
-    .note-actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:.5rem;        /* espacio uniforme entre botones */
-      margin-top:.5rem; /* separación del contenido */
-      align-items:center;
-    }
-    /* En pantallas medianas/altas, alineamos a la izquierda con buen espaciado */
-    @media (min-width: 768px){
-      .note-actions{ justify-content:flex-start; }
-    }
+    /* Acciones ordenadas y responsive */
+    .note-actions{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.5rem; align-items:center; }
+    @media (min-width: 768px){ .note-actions{ justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -62,7 +53,9 @@
       <button class="btn btn-success ms-2" id="btnDownload">Descargar (cifrado)</button>
       <button class="btn btn-warning ms-2" id="btnUpload">Cargar</button>
       <button class="btn btn-secondary ms-2" id="btnManageCats">Gestionar Categorías</button>
-      <button class="btn btn-info ms-2" id="btnToggleArchived" style="margin-top: 0.5rem;"><i class="fa-solid fa-box-archive me-1"></i> Mostrar/Ocultar archivadas</button>
+      <button class="btn btn-info ms-2" id="btnToggleArchived" style="margin-top:.5rem;">
+        <i class="fa-solid fa-box-archive me-1"></i> Mostrar/Ocultar archivadas
+      </button>
       <input type="file" id="fileInput" accept="application/json" style="display:none"/>
     </div>
 
@@ -334,7 +327,6 @@
 
       const body = document.createElement('p'); body.textContent = note.content || '';
 
-      /* Botonera ordenada y responsive */
       const btns = document.createElement('div'); btns.className = 'note-actions';
       const bEdit = document.createElement('button'); bEdit.className='btn btn-sm btn-warning';  bEdit.textContent='Editar';
       const bDel  = document.createElement('button'); bDel.className='btn btn-sm btn-danger';   bDel.textContent='Eliminar';
@@ -480,6 +472,23 @@
       });
     }
 
+    /* === NUEVO: agregar categoría (click y Enter) === */
+    function addCategory(){
+      const nameInput  = document.getElementById('newCategoryInput');
+      const colorInput = document.getElementById('newCategoryColor');
+      const name  = (nameInput.value || '').trim();
+      const color = colorInput.value || '#ff4500';
+      if (!name){ alert('Escribe un nombre de categoría.'); nameInput.focus(); return; }
+      if (categories.some(c=>c.name.toLowerCase() === name.toLowerCase())){
+        alert('La categoría ya existe.'); nameInput.focus(); return;
+      }
+      categories.push({ name, color, order: categories.length });
+      saveCategories();
+      nameInput.value = '';
+      renderCategoriesTable();
+      renderCategoryTabsAndPanes(name); // activa la recién creada
+    }
+
     /* ===================== Export / Import ===================== */
     function collectAllData(){ return { _meta:{v:1, exportedAt:new Date().toISOString()}, categories, notes }; }
 
@@ -529,12 +538,23 @@
       loadFromLocalStorage();
       await renderCategoryTabsAndPanes();
 
+      // Notas
       document.getElementById('btnAdd').onclick = openNew;
       document.getElementById('searchBox').addEventListener('input', doSearch);
       document.getElementById('btnDownload').onclick = downloadEncrypted;
       document.getElementById('btnUpload').onclick = ()=> document.getElementById('fileInput').click();
       document.getElementById('fileInput').onchange = function(){ loadFromFile(this); };
-      document.getElementById('btnManageCats').onclick = ()=>{ renderCategoriesTable(); new bootstrap.Modal(document.getElementById('manageCategoriesModal')).show(); };
+
+      // Categorías
+      document.getElementById('btnManageCats').onclick = ()=>{
+        renderCategoriesTable();
+        new bootstrap.Modal(document.getElementById('manageCategoriesModal')).show();
+      };
+      document.getElementById('btnAddCategory').onclick = addCategory;                // <— CLICK Agregar
+      document.getElementById('newCategoryInput').addEventListener('keydown',(e)=>{   // <— ENTER Agregar
+        if(e.key==='Enter'){ e.preventDefault(); addCategory(); }
+      });
+
       document.getElementById('btnToggleArchived').onclick = ()=>{ showArchived = !showArchived; renderNotes(); };
 
       document.getElementById('noteForm').onsubmit = (e)=>{
@@ -559,6 +579,7 @@
         renderNotes(); e.target.reset();
       };
 
+      // Renombrar categoría
       document.getElementById('renameCategoryForm').onsubmit = (e)=>{
         e.preventDefault();
         const newName = document.getElementById('renameCategoryInput').value.trim();
@@ -577,6 +598,7 @@
         renderCategoriesTable(); renderCategoryTabsAndPanes(newName);
       };
 
+      // Eliminar categoría
       document.getElementById('deleteCategoryForm').addEventListener('change', (e)=>{
         if (e.target.name === 'deleteMode') document.getElementById('reassignSelect').disabled = (e.target.value !== 'move');
       });
