@@ -21,7 +21,7 @@ export function filterNotes(notes, { scope = 'all', query = '', category = '', s
     if (status && n.status !== status) return false;
     if (priority && n.priority !== priority) return false;
     if (term.startsWith('#')) return n.tags.some(t => fold(t).includes(term.slice(1)));
-    return !term || fold([n.title, n.content, ...n.tags, ...n.checklist.map(t => t.text)].join(' ')).includes(term);
+    return !term || fold([n.title, n.plainText ?? n.content, ...n.tags, ...n.checklist.map(t => t.text), ...(n.images || []).map(i => `${i.name} ${i.caption}`)].join(' ')).includes(term);
   });
   const rank = { high: 3, medium: 2, low: 1, none: 0 };
   return list.sort((a, b) => Number(b.pinned) - Number(a.pinned) || (sort === 'title' ? a.title.localeCompare(b.title, 'es') : sort === 'oldest' ? new Date(a.createdAt) - new Date(b.createdAt) : sort === 'priority' ? rank[b.priority] - rank[a.priority] || new Date(b.updatedAt) - new Date(a.updatedAt) : sort === 'due' ? (a.dueDate || '9999').localeCompare(b.dueDate || '9999') : new Date(b.updatedAt) - new Date(a.updatedAt)));

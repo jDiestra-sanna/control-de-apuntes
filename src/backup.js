@@ -1,5 +1,5 @@
 const enc = new TextEncoder();
-const b64 = bytes => { let s = ''; for (const byte of new Uint8Array(bytes)) s += String.fromCharCode(byte); return btoa(s); };
+const b64 = bytes => { const data = new Uint8Array(bytes), chunks = []; for (let i = 0; i < data.length; i += 32768) chunks.push(String.fromCharCode(...data.subarray(i, i + 32768))); return btoa(chunks.join('')); };
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function keyFor(password, salt, iterations) {
   const material = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);

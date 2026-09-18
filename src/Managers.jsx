@@ -39,13 +39,13 @@ export function Backup({ onClose, onRefresh, notify }) {
       if (tab === 'export') {
         if (password.length < 8) throw new Error('Usa una contraseña de al menos 8 caracteres.');
         if (password !== confirm) throw new Error('Las contraseñas no coinciden.');
-        const data = await api('/workspace');
-        const payload = { _meta: { v: 3, exportedAt: new Date().toISOString() }, ...data, notes: data.notes.map(n => ({ ...n, category: data.categories.find(c => c.id === n.categoryId)?.name })) };
+        const data = await api('/export');
+        const payload = { _meta: { v: 4, exportedAt: new Date().toISOString() }, ...data, notes: data.notes.map(n => ({ ...n, category: data.categories.find(c => c.id === n.categoryId)?.name })) };
         download(await encryptBackup(payload, password), `apuntes_${new Date().toISOString().replace(/[:.]/g, '-')}.enc.json`);
         setPassword(''); setConfirm(''); notify('Respaldo cifrado descargado'); onClose();
       } else {
         if (!file) throw new Error('Selecciona un respaldo .enc.json.');
-        if (file.size > 15 * 1024 * 1024) throw new Error('El respaldo supera los 15 MB.');
+        if (file.size > 90 * 1024 * 1024) throw new Error('El respaldo supera los 90 MB.');
         const data = await decryptBackup(JSON.parse(await file.text()), password);
         if (!data || !Array.isArray(data.notes) || !Array.isArray(data.categories)) throw new Error('El respaldo no contiene notas y categorías válidas.');
         setPreview(data); setPassword('');
@@ -54,11 +54,11 @@ export function Backup({ onClose, onRefresh, notify }) {
   }
   async function importData() { if (busyRef.current || !preview) return; busyRef.current = true; setBusy(true); setError(''); try { const result = await api('/import', send('POST', preview)); setResult(result); setPreview(null); await onRefresh(); notify(`${result.added} notas importadas; ${result.skipped} ya existentes.`); } catch (e) { setError(e instanceof SyntaxError ? 'El archivo no es un respaldo JSON válido.' : e.message); } finally { busyRef.current = false; setBusy(false); } }
   const panel = <>
-    <div className="backup-info"><ShieldCheck size={24}/><p>{tab === 'export' ? 'Incluye todas tus notas, categorías, etiquetas y tareas, también las archivadas y la papelera. El historial permanece en la base local.' : 'Compatible con los respaldos cifrados de tu versión anterior. Las notas con el mismo identificador se omiten; no se sobrescribe ninguna.'}</p></div>
+    <div className="backup-info"><ShieldCheck size={24}/><p>{tab === 'export' ? 'Incluye todas tus notas, categorías, etiquetas, tareas e imágenes, también las archivadas y la papelera. El historial se conserva en SQL Server y en su respaldo completo. El respaldo portátil admite hasta 60 MB de contenido.' : 'Compatible con los respaldos cifrados de tu versión anterior. Las notas con el mismo identificador se omiten; no se sobrescribe ninguna.'}</p></div>
     {error && <Alert>{error}</Alert>}{result && <Alert type="success">Importación completada: {result.added} nuevas, {result.skipped} omitidas.</Alert>}
     {busy && <div className="operation-progress" role="status"><SaSpinner size="sm"/>Procesando respaldo…</div>}
     {preview ? <div className="import-preview"><h3>Respaldo listo para importar</h3><div className="quick-meta"><SaTag text={`${preview.notes.length} notas`} type="info"/><SaTag text={`${preview.categories.length} categorías`} type="light"/></div><p>Se añadirán las notas nuevas y se conservarán las que ya tienes.</p><SaButton label={busy ? 'Importando…' : 'Importar y conservar mis notas'} disabled={busy} onClick={importData}/><SaButton variant="secondary" label="Elegir otro respaldo" disabled={busy} onClick={() => { setPreview(null); setError(''); setFile(null); setUploadKey(key => key + 1); }}/></div> : <form className="backup-form" onSubmit={submit}>
-      {tab === 'import' && <SaFileUpload className="backup-upload" key={uploadKey} inputId="backup-file" label="Archivo de respaldo" helperText="Archivo .enc.json · Hasta 15 MB" accept=".json" maxSize={15} autoConvertToBase64={false} onFileChange={value => { if (!busyRef.current) { setFile(value); setResult(null); setError(''); } }}/>}
+      {tab === 'import' && <SaFileUpload className="backup-upload" key={uploadKey} inputId="backup-file" label="Archivo de respaldo" helperText="Archivo .enc.json · Hasta 90 MB" accept=".json" maxSize={90} autoConvertToBase64={false} onFileChange={value => { if (!busyRef.current) { setFile(value); setResult(null); setError(''); } }}/>}
       {tab === 'import' && !file && <SaButton size="sm" variant="secondary" label="Elegir archivo" onClick={() => document.getElementById('backup-file')?.click()}/>}
       <SaInput uppercase={false} label={tab === 'export' ? 'Contraseña del nuevo respaldo' : 'Contraseña del respaldo'} aria-label={tab === 'export' ? 'Contraseña del nuevo respaldo' : 'Contraseña del respaldo'} type="password" required minLength={tab === 'export' ? 8 : 1} autoComplete="new-password" value={password} onValueChange={setPassword}/>
       {tab === 'export' && <SaInput uppercase={false} label="Confirmar contraseña" type="password" required autoComplete="new-password" value={confirm} onValueChange={setConfirm}/>}

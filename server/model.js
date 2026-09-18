@@ -3,8 +3,13 @@ import { z } from 'zod';
 export class ImportError extends Error {}
 
 export const categorySchema = z.object({ name: z.string().trim().min(1).max(80), color: z.string().regex(/^#[0-9a-f]{6}$/i), order: z.number().int().min(0).default(0) });
+export const imageSchema = z.object({
+  id: z.string().uuid().optional(), name: z.string().trim().min(1).max(200), caption: z.string().trim().max(1000).default(''),
+  addedAt: z.string().datetime().optional(), data: z.string().min(1).max(5592408).optional()
+}).refine(image => image.id || image.data, 'Faltan los datos de la imagen.');
 export const noteSchema = z.object({
   title: z.string().trim().min(1, 'Escribe un título.').max(300), content: z.string().max(1000000).default(''),
+  format: z.enum(['markdown', 'richtext']).default('markdown'), images: z.array(imageSchema).max(8, 'Hasta 8 imágenes por nota.').default([]),
   categoryId: z.string().min(1).max(128), status: z.enum(['inbox', 'todo', 'doing', 'done']).default('inbox'),
   priority: z.enum(['none', 'low', 'medium', 'high']).default('none'),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),

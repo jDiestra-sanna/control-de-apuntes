@@ -1,0 +1,147 @@
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import sharp from 'sharp';
+import { expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { decryptBackup } from '../server/crypto.js';
+
+export async function mediaTests({ browser, base, request, repo, pool, ok, qaDir }) {
+  const buffer = await sharp(Buffer.from('<svg width="640" height="320"><rect width="640" height="320" fill="#e7f3eb"/><rect x="32" y="32" width="576" height="70" rx="12" fill="#246841"/><text x="56" y="77" font-family="Arial" font-size="24" fill="white">Evidencia de prueba</text><text x="48" y="160" font-family="Arial" font-size="20" fill="#246841">Antes / despues de una mejora</text><text x="48" y="210" font-family="Arial" font-size="16" fill="#246841">Datos sinteticos para QA</text></svg>')).png().toBuffer();
+  const file = { name: 'evidencia.png', mimeType: 'image/png', buffer };
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1050 } });
+  const page = await context.newPage(), errors = [], external = [];
+  page.on('pageerror', e => { errors.push(e.message); console.error('Media UI:', e.stack); });
+  page.on('request', r => { if (!r.url().startsWith(base) && !r.url().startsWith('blob:') && !r.url().startsWith('data:')) external.push(r.url()); });
+  const dialog = page.getByRole('dialog'), title = 'Evidencia visual de QA';
+  const visual = dialog.getByRole('textbox', { name: 'Contenido visual de la nota' });
+  const open = async () => { await page.getByRole('textbox', { name: 'Buscar notas' }).fill(title); await page.getByRole('heading', { name: title, exact: true }).click(); };
+  const save = async () => { await dialog.getByRole('button', { name: 'Guardar nota', exact: true }).click(); await expect(dialog).toHaveCount(0); };
+  try {
+    await page.goto(base);
+    await page.getByRole('button', { name: 'Nueva nota', exact: true }).first().click();
+    await expect(dialog.getByRole('button', { name: 'Editor visual', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dialog.getByRole('group', { name: 'Formato visual', exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cerrar ventana', exact: true }).click();
+    await expect(dialog).toHaveCount(0); // Opening the default editor must not dirty an empty draft.
+    await page.getByRole('button', { name: 'Nueva nota', exact: true }).first().click();
+    await dialog.getByLabel('Título de la nota').fill(title);
+    await expect(visual).toBeVisible();
+    await visual.fill('Resultado documentado'); await visual.press('Control+a');
+    await dialog.getByRole('button', { name: 'Negrita', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Subrayado', exact: true }).click();
+    await dialog.getByLabel('Tipografía', { exact: true }).selectOption('Georgia');
+    await dialog.getByLabel('Tamaño de texto', { exact: true }).selectOption('24px');
+    await dialog.getByRole('button', { name: 'Centrar texto', exact: true }).click();
+    await expect(visual.locator('strong')).toContainText('Resultado documentado');
+    await dialog.getByRole('button', { name: 'Insertar enlace', exact: true }).click();
+    await dialog.getByLabel('Dirección del enlace').fill('https://example.org/evidencia');
+    await dialog.getByRole('button', { name: 'Aplicar enlace' }).click();
+    await expect(visual.locator('a')).toHaveAttribute('href', 'https://example.org/evidencia');
+    await visual.press('ArrowRight'); await visual.press('End');
+    await dialog.getByRole('button', { name: 'Insertar emoji', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Insertar ✅', exact: true }).click();
+    await expect(visual).toContainText('✅');
+    await expect(dialog.getByRole('button', { name: 'Deshacer edición', exact: true })).toBeEnabled();
+    await dialog.getByRole('tab', { name: 'Vista previa', exact: true }).click();
+    await dialog.getByRole('tab', { name: 'Escribir', exact: true }).click();
+    await expect(dialog.getByRole('button', { name: 'Deshacer edición', exact: true })).toBeEnabled();
+    await dialog.getByLabel('Seleccionar imágenes', { exact: true }).setInputFiles(file);
+    await expect(dialog.locator('.note-image img')).toHaveCount(1);
+    await dialog.getByLabel('Descripción de imagen 1', { exact: true }).fill('Captura anterior al cambio');
+    // Actual ClipboardEvent/DataTransfer: same application event path as a screenshot paste/drop.
+    const transfer = async (event, name) => visual.evaluate((el, { event, data, name }) => {
+      const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+      const transfer = new DataTransfer(); transfer.items.add(new File([bytes], name, { type: 'image/png' }));
+      el.dispatchEvent(event === 'paste' ? new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }) : new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+    }, { event, data: buffer.toString('base64'), name });
+    await transfer('paste', 'portapapeles.png'); await expect(dialog.locator('.note-image')).toHaveCount(2);
+    await transfer('drop', 'arrastrada.png'); await expect(dialog.locator('.note-image')).toHaveCount(3);
+    await expect.poll(() => dialog.locator('.note-image img').evaluateAll(imgs => imgs.every(img => img.complete && img.naturalWidth === 640))).toBe(true);
+    await dialog.getByLabel('Título de la nota').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${qaDir}/editor-visual.png`, fullPage: true });
+    const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    writeFileSync(`${qaDir}/accessibility-media.json`, JSON.stringify(audit.violations, null, 2));
+    assert.deepEqual(audit.violations.map(v => v.id), []);
+    await save();
+    let note = (await request('/workspace')).data.notes.find(n => n.title === title);
+    assert.equal(note.format, 'richtext'); assert.equal(note.images.length, 3); assert.ok(note.images.every(i => !i.data && i.sha256.length === 64));
+    assert.match(note.content, /font-size:24px/); assert.match(note.content, /font-family:Georgia/); assert.match(note.content, /text-align:center/); assert.match(note.content, /<u>/); assert.match(note.plainText, /Resultado documentado/);
+    const id = note.images[0].id;
+    assert.equal(new Set(note.images.map(i => i.id)).size, 1);
+    const stored = (await pool.request().query('SELECT Payload FROM dbo.NoteImages')).recordset;
+    assert.equal(stored.length, 1); assert.ok(!stored[0].Payload.includes(note.images[0].sha256)); assert.ok(!stored[0].Payload.includes(buffer.toString('base64')));
+    const imageResponse = await fetch(`${base}/api/images/${id}`, { headers: { 'X-Apuntes-Client': 'local' } });
+    assert.equal(imageResponse.status, 200); assert.match(imageResponse.headers.get('content-type'), /image\/webp/);
+    assert.equal((await sharp(Buffer.from(await imageResponse.arrayBuffer())).metadata()).width, 640);
+    assert.equal((await fetch(`${base}/api/images/${id}`)).status, 403);
+    ok('Editor visual, formato, enlace, emoji y carga/pegado/arrastre de imágenes con accesibilidad A/AA');
+    ok('Imágenes cifradas y deduplicadas en SQL; API protegida y biblioteca sin binarios');
+
+    await page.reload(); await open();
+    await expect(dialog.locator('.rich-note')).toContainText('Resultado documentado');
+    await expect.poll(() => dialog.locator('.note-image img').evaluateAll(imgs => imgs.length === 3 && imgs.every(img => img.complete && img.naturalWidth === 640))).toBe(true);
+    await dialog.getByRole('button', { name: 'Ampliar imagen 1', exact: true }).click();
+    await expect(dialog.locator('.image-expanded')).toHaveCount(1);
+    const downloadEvent = page.waitForEvent('download'); await dialog.getByRole('link', { name: 'Descargar imagen 1', exact: true }).click();
+    const downloaded = await downloadEvent; await downloaded.saveAs(`${qaDir}/image-download.webp`);
+    assert.equal((await sharp(readFileSync(`${qaDir}/image-download.webp`)).metadata()).width, 640);
+    await page.screenshot({ path: `${qaDir}/image-evidence.png`, fullPage: true });
+    await dialog.getByRole('button', { name: 'Reducir imagen 1', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Quitar imagen 1', exact: true }).click();
+    await save();
+    note = await repo.getNote(note.id); assert.equal(note.images.length, 2);
+    const versions = await repo.history(note.id); assert.equal(versions.find(v => v.revision === 1).images.length, 3);
+    await open(); await dialog.getByRole('button', { name: 'Ver historial', exact: true }).click();
+    await page.getByRole('button', { name: 'Versión 1', exact: true }).click();
+    await expect(page.locator('.version-preview .note-image')).toHaveCount(3);
+    await page.getByRole('button', { name: 'Recuperar como borrador', exact: true }).click(); await save();
+    note = await repo.getNote(note.id); assert.equal(note.images.length, 3); assert.equal(note.revision, 3);
+    ok('Recarga, ampliación, descarga, retiro y recuperación de imágenes desde el historial');
+
+    const count = (await repo.notes()).length;
+    const bad = await request('/notes', 'POST', { title: 'Falso archivo', categoryId: note.categoryId, images: [{ name: 'falso.png', data: Buffer.from('<script>alert(1)</script>').toString('base64') }] });
+    assert.equal(bad.status, 400); assert.equal((await repo.notes()).length, count);
+    const rollback = await request('/notes', 'POST', { title: 'No persistir', categoryId: note.categoryId, images: [{ name: 'válida.png', data: (await sharp({ create: { width: 2, height: 2, channels: 3, background: '#fdfeff' } }).png().toBuffer()).toString('base64') }, { name: 'Ausente', id: randomUUID() }] });
+    assert.equal(rollback.status, 404); assert.equal((await pool.request().query('SELECT COUNT(*) AS n FROM dbo.NoteImages')).recordset[0].n, 1);
+    const stale = await request(`/notes/${note.id}`, 'PUT', { ...note, revision: 1, images: [] }); assert.equal(stale.status, 409);
+    assert.equal((await repo.getNote(note.id)).images.length, 3);
+    const exported = (await request('/export')).data;
+    const portable = { categories: exported.categories, notes: [{ ...exported.notes.find(n => n.id === note.id), id: `media-import-${randomUUID()}`, title: 'Copia portátil', images: exported.notes.find(n => n.id === note.id).images.map(i => ({ ...i, id: randomUUID() })) }] };
+    assert.equal((await request('/import', 'POST', portable)).data.added, 1);
+    assert.equal((await repo.notes()).find(n => n.title === 'Copia portátil').images[0].sha256, note.images[0].sha256);
+    const copied = await request('/notes', 'POST', { ...note, title: 'Copia visual', id: undefined }); assert.equal(copied.status, 201); assert.equal(copied.data.images[0].id, id);
+    const trashed = await request(`/notes/${copied.data.id}/trash`, 'POST', { revision: 1 });
+    const restored = await request(`/notes/${copied.data.id}/restore`, 'POST', { revision: trashed.data.revision }); assert.equal(restored.data.images[0].id, id);
+    ok('Rollback de adjuntos, conflictos sin pérdida, duplicado, papelera y traslado de imágenes con respaldo');
+
+    await page.getByRole('button', { name: 'Importar / exportar', exact: true }).first().click();
+    await dialog.getByLabel('Contraseña del nuevo respaldo', { exact: true }).fill('media-qa-password'); await dialog.getByLabel('Confirmar contraseña').fill('media-qa-password');
+    const backupEvent = page.waitForEvent('download'); await dialog.getByRole('button', { name: 'Descargar respaldo cifrado' }).click();
+    const backup = await backupEvent; const path = `${qaDir}/media-export.enc.json`; await backup.saveAs(path);
+    const data = decryptBackup(JSON.parse(readFileSync(path, 'utf8')), 'media-qa-password');
+    assert.equal(data._meta.v, 4); assert.equal(data.notes.find(n => n.id === note.id).images[0].data, exported.notes.find(n => n.id === note.id).images[0].data);
+    ok('Descarga de respaldo cifrado v4 incluye los binarios de las imágenes');
+
+    await open(); await dialog.getByRole('tab', { name: 'Escribir', exact: true }).click();
+    await visual.fill('SELECT 42;'); await visual.press('Control+a');
+    await dialog.getByRole('button', { name: 'Bloque de código', exact: true }).click(); await expect(visual.locator('pre')).toHaveText('SELECT 42;');
+    await dialog.getByRole('button', { name: 'Bloque de código', exact: true }).click(); await expect(visual.locator('pre')).toHaveCount(0); await expect(visual).toHaveText('SELECT 42;');
+    await dialog.getByRole('button', { name: 'Deshacer edición', exact: true }).click(); await expect(visual.locator('pre')).toHaveCount(1);
+    await dialog.getByRole('button', { name: 'Rehacer edición', exact: true }).click(); await expect(visual.locator('pre')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Markdown', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Convertir a Markdown' }).click();
+    await expect(dialog.getByLabel('Contenido de la nota', { exact: true })).toHaveValue('SELECT 42;');
+    await expect(dialog.locator('.note-image')).toHaveCount(3);
+    await dialog.getByRole('button', { name: 'Editor visual', exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await dialog.getByLabel('Título de la nota').scrollIntoViewIfNeeded();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    assert.ok(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 2));
+    await page.screenshot({ path: `${qaDir}/editor-visual-mobile.png`, fullPage: true });
+    ok('Código reversible, deshacer/rehacer, conversión Markdown y editor móvil sin desbordamiento');
+    assert.deepEqual(errors, []); assert.deepEqual(external, []);
+    ok('Editor e imágenes sin errores JavaScript ni solicitudes externas');
+  } catch (e) { await page.screenshot({ path: `${qaDir}/media-failure.png`, fullPage: true }).catch(() => {}); throw e; }
+  finally { await context.close(); }
+}

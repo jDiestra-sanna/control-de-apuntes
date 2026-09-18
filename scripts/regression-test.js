@@ -11,7 +11,7 @@ export async function regressionTests({ browser, base, request, ok, qaDir }) {
   const dialog = page.getByRole('dialog');
   const content = dialog.getByRole('textbox', { name: 'Contenido de la nota' });
   const save = () => dialog.getByRole('button', { name: 'Guardar nota', exact: true }).click();
-  const create = async title => { await page.getByRole('button', { name: 'Nueva nota', exact: true }).first().click(); await dialog.getByLabel('Título de la nota').fill(title); };
+  const create = async title => { await page.getByRole('button', { name: 'Nueva nota', exact: true }).first().click(); await dialog.getByRole('button', { name: 'Markdown', exact: true }).click(); await dialog.getByLabel('Título de la nota').fill(title); };
   const open = async title => { await page.getByRole('textbox', { name: 'Buscar notas' }).fill(title); await page.getByRole('heading', { name: title, exact: true }).click(); await dialog.getByRole('tab', { name: 'Escribir', exact: true }).click(); };
   const discard = async () => { await dialog.getByRole('button', { name: 'Cerrar ventana' }).click(); await dialog.getByRole('button', { name: 'Descartar cambios', exact: true }).click(); await expect(dialog).toHaveCount(0); };
   async function audit(name) {

@@ -6,6 +6,7 @@ import { connect, database, server, authentication } from './db.js';
 import { loadKey } from './crypto.js';
 import { repository, AppError } from './repository.js';
 import { ImportError } from './model.js';
+import { ImageError } from './images.js';
 
 const dev = process.argv.includes('--dev');
 const port = Number(process.env.PORT || 3188);
@@ -25,9 +26,12 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json({ limit: '15mb' }));
+app.use('/api/import', express.json({ limit: '64mb' }));
+app.use(express.json({ limit: '20mb' }));
 app.get('/api/health', async (req, res) => { await pool.request().query('SELECT 1 AS ready'); res.json({ ok: true, database, server, authentication, engine: 'SQL Server', localOnly: true }); });
 app.get('/api/workspace', async (req, res) => { const [categories, notes] = await Promise.all([repo.categories(), repo.notes()]); res.json({ categories, notes }); });
+app.get('/api/export', async (req, res) => res.json(await repo.exportData()));
+app.get('/api/images/:id', async (req, res) => { const image = await repo.getImage(req.params.id); res.type(image.mime).send(Buffer.from(image.data, 'base64')); });
 app.post('/api/notes', async (req, res) => res.status(201).json(await repo.createNote(req.body)));
 app.get('/api/notes/:id', async (req, res) => res.json(await repo.getNote(req.params.id)));
 app.put('/api/notes/:id', async (req, res) => res.json(await repo.updateNote(req.params.id, req.body)));
@@ -52,8 +56,8 @@ if (dev) {
 app.use((error, req, res, next) => {
   if (error.name === 'ZodError') return res.status(400).json({ error: error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(' · ') });
   if (error instanceof AppError) return res.status(error.status).json({ error: error.message });
-  if (error instanceof ImportError) return res.status(400).json({ error: error.message });
-  if (error.type === 'entity.too.large') return res.status(413).json({ error: 'El archivo supera el límite de 15 MB.' });
+  if (error instanceof ImportError || error instanceof ImageError) return res.status(400).json({ error: error.message });
+  if (error.type === 'entity.too.large') return res.status(413).json({ error: 'La solicitud supera el límite permitido (20 MB por nota; 64 MB por respaldo descifrado).' });
   if (error instanceof SyntaxError) return res.status(400).json({ error: 'El formato JSON no es válido.' });
   // No registrar contenido de notas, parámetros SQL ni contraseñas.
   console.error('Error de operación', error.code || error.name);

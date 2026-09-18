@@ -7,8 +7,9 @@ import Editor from './Editor.jsx';
 import { NotesAgenda, NotesTable, QuickNote } from './NoteViews.jsx';
 import { Categories, Backup } from './Managers.jsx';
 import { filterNotes, localDay, statuses, priorities } from './utils.js';
+import { toVisual } from './rich-content.js';
 
-const empty = { title: '', content: '', tags: [], status: 'inbox', priority: 'none', dueDate: null, pinned: false, archived: false, private: false, checklist: [] };
+const empty = { title: '', content: '', format: 'richtext', tags: [], status: 'inbox', priority: 'none', dueDate: null, pinned: false, archived: false, private: false, checklist: [] };
 const names = { all: 'Todas las notas', pinned: 'Notas fijadas', kanban: 'Tablero kanban', today: 'Mi día', archive: 'Archivadas', trash: 'Papelera', category: 'Categoría' };
 const descriptions = { all: 'Todo lo que necesitas recordar, en un mismo lugar.', pinned: 'Tus ideas importantes, siempre a mano.', kanban: 'Dale un siguiente paso a cada idea.', today: 'Un poco de enfoque para lo que viene hoy.', archive: 'Un espacio para lo que quieres conservar.', trash: 'Las notas eliminadas se conservan aquí. Puedes restaurarlas.', category: 'Cada tema tiene su propio espacio.' };
 function pref(key, fallback) { try { return localStorage.getItem(key) || fallback; } catch { return fallback; } }
@@ -41,6 +42,8 @@ export default function App() {
     if (template === 'meeting') { draft.title = 'Notas de reunión'; draft.content = '## Objetivo\n\n\n## Temas tratados\n\n- \n\n## Acuerdos\n\n- \n\n## Próximos pasos\n\n'; draft.tags = ['reunión']; }
     if (template === 'sql') { draft.title = 'Nueva consulta SQL'; draft.content = '## Descripción\n\n\n## Consulta\n\n```sql\n-- Escribe tu consulta aquí\nSELECT\n\n```\n\n## Observaciones\n\n'; draft.tags = ['sql']; }
     if (template === 'task') { draft.title = 'Nueva tarea'; draft.status = 'todo'; draft.checklist = [{ id: crypto.randomUUID(), text: 'Definir el primer paso', done: false }]; }
+    if (template === 'sql') draft.format = 'markdown';
+    else if (draft.content) draft.content = toVisual(draft.content);
     setEditorHistory(false); setEditor(draft); setMobile(false);
   }, [category, data.categories]);
   useEffect(() => {

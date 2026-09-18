@@ -8,6 +8,7 @@ import { chromium, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { regressionTests } from './regression-test.js';
 import { sannaTests } from './sanna-test.js';
+import { mediaTests } from './media-test.js';
 
 // Base efímera independiente: nunca ejecutar QA funcional contra notas reales.
 // La configuración remota del proyecto no debe enviar la suite al servidor compartido.
@@ -73,6 +74,7 @@ try {
   assert.equal((await request('/health')).data.database, dbName); ok('API real, SQL Server y bloqueo de solicitudes externas');
   const bad = await request('/notes', 'POST', { title: '', categoryId: 'missing' }); assert.equal(bad.status, 400); ok('Validación HTTP de entradas');
   browser = await chromium.launch({ channel: 'msedge', headless: true });
+  if (!process.argv.includes('--media-only')) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1050 } });
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
@@ -89,6 +91,7 @@ try {
   assert.deepEqual(audit.violations.map(v => v.id), []); ok('Accesibilidad automática WCAG A/AA en biblioteca');
   await page.getByRole('button', { name: 'Nueva nota', exact: true }).first().click();
   let dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Markdown', exact: true }).click();
   await dialog.getByRole('textbox', { name: 'Título de la nota' }).fill('Nota de verificación');
   await dialog.getByRole('textbox', { name: 'Contenido de la nota' }).fill('## Prueba funcional\n\nContenido guardado y verificable.');
   await dialog.getByLabel('Estado del kanban').selectOption('todo');
@@ -167,7 +170,9 @@ try {
   assert.deepEqual(errors, []); assert.deepEqual(requests, []); ok('Sin errores de consola ni solicitudes a terceros');
   await regressionTests({ browser, base, request, ok, qaDir });
   await sannaTests({ browser, base, request, ok, qaDir });
-  writeFileSync(`${qaDir}/results.json`, JSON.stringify({ timestamp: new Date().toISOString(), database: dbName, checks: results, errors, externalRequests: requests }, null, 2));
+  }
+  await mediaTests({ browser, base, request, repo, pool, ok, qaDir });
+  writeFileSync(`${qaDir}/${process.argv.includes('--media-only') ? 'media-results' : 'results'}.json`, JSON.stringify({ timestamp: new Date().toISOString(), database: dbName, checks: results, errors, externalRequests: requests }, null, 2));
   console.log(`${results.length} verificaciones funcionales completadas.`);
 } catch (error) {
   const page = browser?.contexts()[0]?.pages()[0];

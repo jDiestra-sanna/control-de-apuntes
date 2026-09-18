@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { SaButton, SaInput, SaTextarea, SaSelect, SaCheckbox, SaSwitch, SaTabs, SaCombobox, SaCalendar, SaProgress } from '@sanna-ui/react';
 import { Bold, CheckSquare, Code2, Copy, Eye, FileText, History, List, Save, X, Undo2, Redo2, Pilcrow, CornerDownRight } from 'lucide-react';
 import { Modal, IconButton, Markdown, Alert, ConfirmContent } from './components.jsx';
@@ -6,12 +6,16 @@ import { statuses, priorities, fullDate, calendarDate, calendarDay, calendarLoca
 import { api } from './api.js';
 import { HistoryPanel } from './NoteViews.jsx';
 import { codeBlockAt, toggleCode, plainText, exitCode, toggleBold, toggleList } from './editor-format.js';
+import NoteContent from './NoteContent.jsx';
+import NoteImages from './NoteImages.jsx';
+import { toVisual, toMarkdown, visibleText } from './rich-content.js';
+const RichEditor = lazy(() => import('./RichEditor.jsx'));
 
 export default function Editor({ note, categories, onClose, onSave, onTrash, onRestore, onDuplicate, availableTags = [], initialHistory = false }) {
   const [draft, setDraft] = useState(() => ({ ...note }));
   const [baseline, setBaseline] = useState(note);
   const [tags, setTags] = useState(note.tags.join(', '));
-  const [tab, setTab] = useState(note.id ? 'preview' : 'edit');
+  const [tab, setTab] = useState('edit');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [history, setHistory] = useState(initialHistory);
@@ -24,12 +28,25 @@ export default function Editor({ note, categories, onClose, onSave, onTrash, onR
   const textarea = useRef();
   const tagInput = useRef();
   const form = useRef();
+  const images = useRef();
   const busyRef = useRef(false);
   const pendingSelection = useRef(null);
   const edits = useRef({ items: [{ text: note.content, start: 0, end: 0 }], index: 0, typedAt: 0 });
   const change = (name, value) => setDraft(d => ({ ...d, [name]: value }));
+  const visual = draft.format === 'richtext';
+  function changeFormat(next) {
+    if (next === (draft.format || 'markdown')) return;
+    const convert = () => {
+      const content = next === 'richtext' ? toVisual(draft.content) : toMarkdown(draft.content);
+      setDraft(d => ({ ...d, content, format: next })); setTab('edit');
+      edits.current = { items: [{ text: content, start: 0, end: 0 }], index: 0, typedAt: 0 };
+      pendingSelection.current = null; setCursor({ start: 0, end: 0 });
+    };
+    if (next === 'markdown' && draft.content) ask('Markdown conserva el texto, enlaces, listas y código. La tipografía, los colores, el subrayado y la alineación se simplificarán. Las imágenes adjuntas se conservan.', 'Convertir a Markdown', convert);
+    else convert();
+  }
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline) || tags !== baseline.tags.join(', ') || Boolean(task.trim());
-  const block = codeBlockAt(draft.content, cursor.start, cursor.end);
+  const block = visual ? null : codeBlockAt(draft.content, cursor.start, cursor.end);
   const ask = (message, label, run) => setConfirmation({ message, label, run });
   const close = () => {
     if (busyRef.current) return;
@@ -102,29 +119,33 @@ export default function Editor({ note, categories, onClose, onSave, onTrash, onR
   const sourceInput = <SaTextarea ref={textarea} label="Contenido de la nota" hideLabel aria-label="Contenido de la nota" className="content-field" placeholder="Escribe sin prisa. Puedes usar Markdown, listas y bloques de código." value={draft.content}
     onSelect={rememberSelection} onChange={e => editContent({ text: e.target.value, start: e.target.selectionStart, end: e.target.selectionEnd }, true)}
     onKeyDown={e => { if (!(e.ctrlKey || e.metaKey) || e.altKey || e.nativeEvent.isComposing) return; const key = e.key.toLowerCase(); if (key === 'z' || key === 'y') { e.preventDefault(); undo(key === 'y' || e.shiftKey ? 1 : -1); } else if (key === 'b' && !block) { e.preventDefault(); format(toggleBold); } }} maxLength={1000000}/>;
+  // Keep the visual editor session alive when its content tab is hidden.
+  const contentTabs = source => <SaTabs className="editor-content-tabs" tabListAriaLabel="Modo del editor" activeIndex={tab === 'edit' ? 0 : 1} onActiveIndexChange={index => setTab(index === 0 ? 'edit' : 'preview')} tabs={[{ label: <><FileText size={14}/>Escribir</>, content: source, disabled: busy }, { label: <><Eye size={14}/>Vista previa</>, content: <div className="editor-preview"><NoteContent note={draft}/></div>, disabled: busy }]}/>;
   return <>
     <Modal open={!history} title={confirmation ? 'Cambios sin guardar' : note.id ? 'Tu nota, con espacio para más.' : 'Una nueva idea empieza aquí.'} subtitle={confirmation ? 'Tu borrador sigue disponible hasta que decidas.' : note.id ? `Editada el ${fullDate(baseline.updatedAt)} · Versión ${baseline.revision}` : 'Escribe, organiza y dale forma a lo que tienes en mente.'} onClose={close} wide={!confirmation}>
       {confirmation ? <ConfirmContent message={confirmation.message} confirmLabel={confirmation.label} onCancel={() => setConfirmation(null)} onConfirm={() => { const run = confirmation.run; setConfirmation(null); run(); }}/> : <>
       {error && <Alert>{error}{conflict && <div className="conflict-actions"><SaButton size="sm" disabled={busy} label="Guardar borrador como copia" onClick={e => save(e, true)}/><SaButton size="sm" variant="secondary" disabled={busy} label="Cargar versión actual" onClick={() => ask('Al cargar la versión actual se descartará este borrador.', 'Cargar y descartar', loadLatest)}/></div>}</Alert>}
-      <form ref={form} onSubmit={save} onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save(); } }}>
+      <form ref={form} onSubmit={save} onPasteCapture={e => { const files = [...(e.clipboardData?.files || [])]; if (files.length) { e.preventDefault(); images.current?.addFiles(files); } }} onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDropCapture={e => { if (e.dataTransfer.files.length) { e.preventDefault(); e.stopPropagation(); images.current?.addFiles([...e.dataTransfer.files]); } }} onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save(); } }}>
         <fieldset className="editor-fields" disabled={busy}><div className="editor-layout"><div className="editor-main">
           <SaInput uppercase={false} autoFocus={!note.id} className="note-title-field" label="Título de la nota" hideLabel aria-label="Título de la nota" placeholder="Ponle un título a tu idea…" required maxLength={300} errorText={titleError} value={draft.title} onValueChange={value => { change('title', value); setTitleError(''); }}/>
-          <div className="editor-toolbar"><span className="format-hint">{block ? 'Dentro de un bloque de código' : 'Texto con formato Markdown'}</span><div className="format-actions" role="group" aria-label="Formato del contenido">
+          <div className="editor-mode"><div className="editor-mode-buttons" role="group" aria-label="Formato de la nota"><SaButton type="button" size="sm" label="Editor visual" variant="primary" aria-pressed={visual} icon={<Bold size={15}/>} onClick={() => { if (visual) setTab('edit'); else changeFormat('richtext'); }}/><SaButton type="button" size="sm" label="Markdown" variant="secondary" aria-pressed={!visual} icon={<Code2 size={15}/>} onClick={() => { if (!visual) setTab('edit'); else changeFormat('markdown'); }}/></div><span>{visual ? 'Selecciona texto y usa las herramientas de formato.' : 'Pulsa Editor visual para usar colores, tipografías, alineación, enlaces y emojis.'}</span></div>
+          {!visual && <div className="editor-toolbar"><span className="format-hint">{block ? 'Dentro de un bloque de código' : 'Texto con formato Markdown'}</span><div className="format-actions" role="group" aria-label="Formato del contenido">
             <IconButton label="Deshacer edición" disabled={edits.current.index === 0} onClick={() => undo(-1)}><Undo2 size={16}/></IconButton>
             <IconButton label="Rehacer edición" disabled={edits.current.index === edits.current.items.length - 1} onClick={() => undo(1)}><Redo2 size={16}/></IconButton>
             <IconButton label="Negrita" disabled={Boolean(block)} onClick={() => format(toggleBold)}><Bold size={15}/></IconButton>
             <IconButton label="Bloque de código" aria-pressed={Boolean(block)} onClick={() => format(toggleCode)}><Code2 size={16}/></IconButton>
             <SaButton size="sm" variant="secondary" className="plain-text-button" disabled={!block} label="Texto simple" icon={<Pilcrow size={15}/>} onClick={() => format(plainText)}/>
             <IconButton label="Lista" disabled={Boolean(block)} onClick={() => format(toggleList)}><List size={16}/></IconButton>
-          </div></div>
+          </div></div>}
           {block && <SaButton size="sm" variant="terciary" label="Continuar debajo del código" icon={<CornerDownRight size={14}/>} onClick={() => format(exitCode)}/>}
-          <SaTabs className="editor-content-tabs" tabListAriaLabel="Modo del editor" activeIndex={tab === 'edit' ? 0 : 1} onActiveIndexChange={index => setTab(index === 0 ? 'edit' : 'preview')} tabs={[{ label: <><FileText size={14}/>Escribir</>, content: sourceInput, disabled: busy }, { label: <><Eye size={14}/>Vista previa</>, content: <div className="editor-preview"><Markdown>{draft.content}</Markdown></div>, disabled: busy }]}/>
+          {visual ? <Suspense fallback={<p role="status">Preparando editor visual…</p>}><RichEditor value={draft.content} onChange={value => change('content', value)} onImages={() => images.current?.choose()} disabled={busy} render={contentTabs}/></Suspense> : contentTabs(sourceInput)}
+          <NoteImages ref={images} images={draft.images || []} disabled={busy} onChange={value => change('images', value)} onError={setError} onBusy={value => { busyRef.current = value; setBusy(value); }}/>
           <div className="checklist"><h4><CheckSquare size={16}/>Lista de tareas <span>{draft.checklist.filter(t => t.done).length}/{draft.checklist.length}</span></h4>
             {draft.checklist.length > 0 && <SaProgress value={Math.round(draft.checklist.filter(t => t.done).length / draft.checklist.length * 100)} aria-label="Avance de tareas de la nota"/>}
             {draft.checklist.map(item => <div className="task-item" key={item.id}><SaCheckbox size="sm" className={item.done ? 'completed' : ''} label={item.text} checked={item.done} onCheckedChange={value => change('checklist', draft.checklist.map(t => t.id === item.id ? { ...t, done: value } : t))}/><IconButton label={`Quitar tarea ${item.text}`} onClick={() => change('checklist', draft.checklist.filter(t => t.id !== item.id))}><X size={14}/></IconButton></div>)}
             <div className="task-add"><SaInput uppercase={false} size="sm" label="Nueva tarea" hideLabel placeholder="Añadir una tarea y presionar Enter" value={task} maxLength={500} onValueChange={setTask} onKeyDown={e => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.nativeEvent.isComposing) addTask(e); }}/><SaButton size="sm" variant="terciary" disabled={!task.trim()} onClick={addTask} label="Añadir"/></div>
           </div>
-          <div className="editor-footnote">Markdown compatible <span>{draft.content.trim() ? draft.content.trim().split(/\s+/).length : 0} palabras · {draft.content.length} caracteres</span></div>
+          <div className="editor-footnote">{visual ? 'Edición visual' : 'Markdown compatible'} <span>{visibleText(draft).trim() ? visibleText(draft).trim().split(/\s+/).length : 0} palabras</span></div>
         </div><aside className="editor-properties"><h4>ORGANIZACIÓN</h4>
           <SaSelect label="Categoría" size="sm" value={draft.categoryId} onValueChange={value => change('categoryId', value)} options={categories} bindValue="id" bindLabel="name" showPlaceholder={false}/>
           <SaSelect label="Estado del kanban" size="sm" value={draft.status} onValueChange={value => change('status', value)} options={statuses} bindValue="id" bindLabel="name" showPlaceholder={false}/>

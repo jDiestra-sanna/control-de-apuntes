@@ -14,8 +14,9 @@ try {
     SELECT TOP (0) Id,CategoryId,Payload,Revision,CreatedAt,UpdatedAt,DeletedAt FROM dbo.Notes;
     SELECT TOP (0) NoteId,Revision,Payload,SavedAt FROM dbo.NoteVersions;
     SELECT TOP (0) Hash,ImportedAt,Added,Skipped FROM dbo.Imports;
+    SELECT TOP (0) Id,Hash,Payload,CreatedAt FROM dbo.NoteImages;
   `);
-  const rows = await pool.request().query('SELECT TOP (1) Payload FROM dbo.Notes UNION ALL SELECT TOP (1) Payload FROM dbo.NoteVersions;');
+  const rows = await pool.request().query('SELECT TOP (1) Payload FROM dbo.Notes UNION ALL SELECT TOP (1) Payload FROM dbo.NoteVersions UNION ALL SELECT TOP (1) Payload FROM dbo.NoteImages;');
   for (const row of rows.recordset) decrypt(row.Payload, key);
   console.log(JSON.stringify({ ok: true, server, database, authentication, keyChecked: rows.recordset.length > 0 }));
 } catch {

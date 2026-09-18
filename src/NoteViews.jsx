@@ -3,6 +3,8 @@ import { SaButton, SaCalendar, SaCard, SaMetricCard, SaProgress, SaTable, SaTabs
 import { Alert, Drawer, EmptyState, Markdown, StatusTag } from './components.jsx';
 import { api } from './api.js';
 import { calendarDate, calendarDay, calendarLocale, dueLabel, fullDate, localDay, priorities, statuses } from './utils.js';
+import NoteContent from './NoteContent.jsx';
+import NoteImages from './NoteImages.jsx';
 
 export function NotesAgenda({ notes, categories, onOpen, onNew }) {
   const [day, setDay] = useState(localDay()), [tab, setTab] = useState(0);
@@ -45,7 +47,7 @@ export function HistoryPanel({ note, onClose, onRecover }) {
   return <Drawer title="Historial de la nota" subtitle="Cada guardado conserva una versión. Recuperar prepara un borrador." onClose={onClose} footer={<SaButton label="Volver a la nota" variant="secondary" onClick={onClose}/>}>
     {error && <Alert>{error}</Alert>}
     {!versions && !error && <p role="status">Cargando versiones…</p>}
-    {versions && <><SaTimeline className="note-history" items={versions.map(v => ({ id: v.revision, title: <button className="text-button" aria-pressed={v.revision === selected?.revision} onClick={() => setSelected(v)}>{`Versión ${v.revision}`}</button>, time: fullDate(v.savedAt), status: v.revision === selected?.revision ? 'success' : 'pending' }))}/>{selected ? <section className="version-preview"><h3>{selected.title}</h3><Markdown>{selected.content}</Markdown><SaButton label="Recuperar como borrador" onClick={() => onRecover(selected)}/></section> : <EmptyState title="Sin versiones" description="El próximo guardado quedará registrado aquí."/>}</>}
+    {versions && <><SaTimeline className="note-history" items={versions.map(v => ({ id: v.revision, title: <button className="text-button" aria-pressed={v.revision === selected?.revision} onClick={() => setSelected(v)}>{`Versión ${v.revision}`}</button>, time: fullDate(v.savedAt), status: v.revision === selected?.revision ? 'success' : 'pending' }))}/>{selected ? <section className="version-preview"><h3>{selected.title}</h3><NoteContent note={selected}/><NoteImages images={selected.images}/><SaButton label="Recuperar como borrador" onClick={() => onRecover(selected)}/></section> : <EmptyState title="Sin versiones" description="El próximo guardado quedará registrado aquí."/>}</>}
   </Drawer>;
 }
 
@@ -53,7 +55,7 @@ export function QuickNote({ note, category, onClose, onEdit, onHistory }) {
   const done = note.checklist.filter(t => t.done).length;
   return <Drawer title={note.title} subtitle={`Actualizada ${fullDate(note.updatedAt)}`} onClose={onClose} footer={<><SaButton label="Ver historial" variant="secondary" onClick={onHistory}/><SaButton label="Editar nota" onClick={onEdit}/></>}>
     <div className="quick-meta"><SaTag text={category?.name} type="light"/><StatusTag status={note.status}/><SaTag text={priorities[note.priority]} type="light"/>{note.dueDate && <SaTag text={dueLabel(note.dueDate)} type="info"/>}</div>
-    <Markdown>{note.content}</Markdown>
+    <NoteContent note={note}/><NoteImages images={note.images}/>
     {note.checklist.length > 0 && <div className="quick-checklist"><h3>Tareas · {done}/{note.checklist.length}</h3><SaProgress value={Math.round(done / note.checklist.length * 100)} showLabel aria-label="Progreso de tareas"/><ul>{note.checklist.map(t => <li key={t.id} className={t.done ? 'completed' : ''}>{t.done ? '✓ ' : '○ '}{t.text}</li>)}</ul></div>}
     <div className="quick-meta">{note.tags.map(tag => <SaTag key={tag} text={`#${tag}`} type="light"/>)}</div>
   </Drawer>;

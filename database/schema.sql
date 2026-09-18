@@ -33,4 +33,13 @@ BEGIN
   Skipped int NOT NULL
  );
 END;
+IF OBJECT_ID(N'dbo.NoteImages', N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.NoteImages (
+  Id nvarchar(128) NOT NULL PRIMARY KEY,
+  Hash char(64) NOT NULL UNIQUE,
+  Payload nvarchar(max) NOT NULL,
+  CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME()
+ );
+END;
 COMMIT;

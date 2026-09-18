@@ -11,4 +11,5 @@ import '@fontsource/plus-jakarta-sans/latin-700.css';
 import './styles.css';
 import './sanna-integration.css';
 import './sanna-workspace.css';
+import './note-media.css';
 createRoot(document.getElementById('root')).render(<React.StrictMode><SaToastProvider position="bottom-right" maxToasts={3}><App /></SaToastProvider></React.StrictMode>);

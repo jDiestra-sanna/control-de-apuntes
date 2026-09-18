@@ -47,6 +47,7 @@ Los cinco botones junto a «Todas las notas» cambian entre tarjetas, lista, tab
 ## Datos, seguridad y recuperación
 
 - Servidor activo: `10.6.16.10`. Base: `ControlDeApuntes`. Usuario SQL configurado: `sa`; contraseña solo en `.env`. Transporte cifrado; `SQL_TRUST_SERVER_CERTIFICATE=true` acepta el certificado del servidor sin validar su cadena de confianza.
+- `dbo.NoteImages`: imágenes cifradas y deduplicadas, conservadas también para versiones anteriores. [Guía de imágenes, editor visual y migración](docs/imagenes-y-editor.md).
 - `dbo.Categories`: identificadores, nombres, colores y orden. `dbo.Notes`: relación con categoría, contenido cifrado, revisión y fechas. `dbo.NoteVersions`: versiones cifradas. `dbo.Imports`: registros de importación por huella SHA-256.
 - Títulos, contenido, etiquetas, tareas y demás propiedades se cifran con AES-256-GCM antes de almacenarse. Identificadores, categorías y fechas quedan como metadatos SQL.
 - La clave aleatoria está en `.local/master.key`, con permisos restringidos al usuario Windows. **Conserva esa clave junto con una copia segura de la base**: un `.bak` solo no permite descifrar el contenido. El instalador no reemplaza claves existentes.
@@ -58,7 +59,7 @@ Los cinco botones junto a «Todas las notas» cambian entre tarjetas, lista, tab
 - Dentro de un bloque de código, vuelve a pulsar **Código** o usa **Texto simple** para quitar el formato conservando el contenido. **Continuar debajo del código** crea espacio para escribir fuera del bloque. Usa **Deshacer/Rehacer** o `Ctrl+Z` / `Ctrl+Shift+Z` para corregir cambios del contenido.
 - Guardar incluye la tarea que todavía está escrita en el campo «Nueva tarea». Si otra ventana cambió la nota, el borrador se conserva y puedes guardarlo como copia o cargar la versión actual.
 
-Desde **Importar / exportar** puedes descargar un respaldo AES-GCM con contraseña. Incluye todas las notas actuales, categorías, estados, etiquetas, tareas, archivadas y papelera; **no incluye el historial**. La importación agrega identificadores nuevos y omite existentes. Nunca sustituye toda la biblioteca.
+Desde **Importar / exportar** puedes descargar un respaldo AES-GCM con contraseña. Incluye todas las notas actuales, categorías, estados, etiquetas, tareas, imágenes, archivadas y papelera; **no incluye el historial**. La importación agrega identificadores nuevos y omite existentes. Nunca sustituye toda la biblioteca.
 
 Para respaldar también el historial:
 

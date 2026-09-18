@@ -2,10 +2,13 @@ import { randomUUID, createHash } from 'node:crypto';
 import { sql } from './db.js';
 import { encrypt, decrypt } from './crypto.js';
 import { noteSchema, categorySchema, normalizeImport } from './model.js';
+import { prepareImages, MAX_NOTE_IMAGE_BYTES, ImageError } from './images.js';
+import { prepareContent } from './content.js';
 
 export class AppError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export function repository(pool, key) {
-  const unpack = r => ({ ...decrypt(r.Payload, key), id: r.Id, categoryId: r.CategoryId, revision: r.Revision, createdAt: r.CreatedAt.toISOString(), updatedAt: r.UpdatedAt.toISOString(), deletedAt: r.DeletedAt?.toISOString() || null });
+  const readPayload = payload => prepareContent({ format: 'markdown', images: [], ...decrypt(payload, key) });
+  const unpack = r => ({ ...readPayload(r.Payload), id: r.Id, categoryId: r.CategoryId, revision: r.Revision, createdAt: r.CreatedAt.toISOString(), updatedAt: r.UpdatedAt.toISOString(), deletedAt: r.DeletedAt?.toISOString() || null });
   const categories = async (db = pool) => (await db.request().query('SELECT Id AS id, Name AS name, Color AS color, SortOrder AS [order] FROM dbo.Categories ORDER BY SortOrder,Name')).recordset;
   const notes = async () => (await pool.request().query('SELECT * FROM dbo.Notes ORDER BY UpdatedAt DESC')).recordset.map(unpack);
   async function getNote(id) {
@@ -18,6 +21,7 @@ export function repository(pool, key) {
     try { const result = await fn(tx); await tx.commit(); return result; } catch (e) { try { await tx.rollback(); } catch {} throw e; }
   }
   async function writeNote(db, note, creating = false) {
+    note = prepareContent({ ...note, images: await storeImages(db, note.images || []) });
     const req = db.request().input('id', sql.NVarChar(128), note.id).input('cat', sql.NVarChar(128), note.categoryId)
       .input('payload', sql.NVarChar(sql.MAX), encrypt(note, key)).input('revision', sql.Int, note.revision)
       .input('created', sql.DateTime2(3), new Date(note.createdAt)).input('updated', sql.DateTime2(3), new Date(note.updatedAt))
@@ -36,16 +40,19 @@ export function repository(pool, key) {
   }
   async function createNote(raw) {
     const parsed = noteSchema.parse(raw); const now = new Date().toISOString();
+    parsed.images = await prepareImages(parsed.images);
     return transaction(async tx => { await ensureCategory(tx, parsed.categoryId); return writeNote(tx, { ...parsed, id: randomUUID(), revision: 1, createdAt: now, updatedAt: now, deletedAt: null }, true); });
   }
   async function updateNote(id, raw, action = 'update') {
     if (!Number.isInteger(raw?.revision)) throw new AppError('Falta la versión de la nota.');
+    const parsed = action === 'update' ? noteSchema.parse(raw) : null;
+    if (parsed) parsed.images = await prepareImages(parsed.images);
     return transaction(async tx => {
       const result = await tx.request().input('id', sql.NVarChar(128), id).query('SELECT * FROM dbo.Notes WITH (UPDLOCK) WHERE Id=@id');
       if (!result.recordset.length) throw new AppError('No se encontró la nota.', 404);
       const old = unpack(result.recordset[0]);
       if (old.revision !== raw.revision) throw new AppError('Esta nota cambió en otra ventana. Tu borrador se conserva: puedes guardarlo como copia o cargar la versión actual.', 409);
-      const content = action === 'update' ? noteSchema.parse(raw) : noteSchema.parse(old);
+      const content = parsed || noteSchema.parse(old);
       await ensureCategory(tx, content.categoryId);
       const note = { ...old, ...content, revision: old.revision + 1, updatedAt: new Date().toISOString(), deletedAt: action === 'trash' ? new Date().toISOString() : action === 'restore' ? null : old.deletedAt };
       return writeNote(tx, note);
@@ -85,6 +92,7 @@ export function repository(pool, key) {
   }
   async function importData(data) {
     const normalized = normalizeImport(data); // validar todo antes de comenzar
+    for (const note of normalized.notes) note.images = await prepareImages(note.images);
     const hash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
     return transaction(async tx => {
       const previous = await tx.request().input('hash', sql.Char(64), hash).query('SELECT Added,Skipped FROM dbo.Imports WITH (UPDLOCK) WHERE Hash=@hash');
@@ -112,7 +120,42 @@ export function repository(pool, key) {
   }
   async function history(id) {
     const rows = await pool.request().input('id', sql.NVarChar(128), id).query('SELECT TOP (100) Revision,Payload,SavedAt FROM dbo.NoteVersions WHERE NoteId=@id ORDER BY Revision DESC');
-    return rows.recordset.map(r => ({ ...decrypt(r.Payload, key), revision: r.Revision, savedAt: r.SavedAt.toISOString() }));
+    return rows.recordset.map(r => ({ ...readPayload(r.Payload), revision: r.Revision, savedAt: r.SavedAt.toISOString() }));
   }
-  return { categories, notes, getNote, createNote, updateNote, saveCategory, reorderCategories, deleteCategory, importData, history };
+  async function getImage(id, db = pool) {
+    const row = (await db.request().input('id', sql.NVarChar(128), id).query('SELECT Payload FROM dbo.NoteImages WHERE Id=@id')).recordset[0];
+    if (!row) throw new AppError('No se encontró la imagen. Conserva el respaldo original.', 404);
+    return decrypt(row.Payload, key);
+  }
+  async function storeImages(db, images) {
+    const refs = []; let total = 0;
+    for (const image of images) {
+      let id = image.id, asset;
+      if (image.data) {
+        const existing = (await db.request().input('hash', sql.Char(64), image.hash).query('SELECT Id FROM dbo.NoteImages WITH (UPDLOCK,HOLDLOCK) WHERE Hash=@hash')).recordset[0];
+        asset = { data: image.data, mime: image.mime, width: image.width, height: image.height, size: image.size, hash: image.hash };
+        id = existing?.Id || randomUUID();
+        if (!existing) await db.request().input('id', sql.NVarChar(128), id).input('hash', sql.Char(64), image.hash).input('payload', sql.NVarChar(sql.MAX), encrypt(asset, key)).query('INSERT INTO dbo.NoteImages (Id,Hash,Payload) VALUES (@id,@hash,@payload)');
+      } else asset = await getImage(id, db);
+      total += asset.size;
+      if (total > MAX_NOTE_IMAGE_BYTES) throw new ImageError('La nota supera el límite de 12 MB de imágenes.');
+      refs.push({ id, name: image.name, caption: image.caption, addedAt: image.addedAt || new Date().toISOString(), mime: asset.mime, size: asset.size, width: asset.width, height: asset.height, sha256: asset.hash });
+    }
+    return refs;
+  }
+  async function exportData() {
+    const data = { categories: await categories(), notes: await notes() };
+    let bytes = 0;
+    const cache = new Map();
+    for (const note of data.notes) {
+      bytes += Buffer.byteLength(JSON.stringify(note));
+      for (const image of note.images) {
+        if (!cache.has(image.id)) cache.set(image.id, await getImage(image.id));
+        image.data = cache.get(image.id).data; bytes += image.data.length;
+      }
+      if (bytes > 60 * 1024 * 1024) throw new AppError('El respaldo portátil supera 60 MB. Usa el respaldo completo SQL Server para trasladar esta biblioteca.');
+    }
+    return data;
+  }
+  return { categories, notes, getNote, createNote, updateNote, saveCategory, reorderCategories, deleteCategory, importData, history, getImage, exportData };
 }
