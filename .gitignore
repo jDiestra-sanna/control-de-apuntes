@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.local/
+.env
+*.log
+test-results/
+playwright-report/
+*.bak
+*.enc.json
+_site/

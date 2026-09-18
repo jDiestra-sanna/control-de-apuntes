@@ -1,0 +1,168 @@
+{
+  "scope": "Archivos locales revisados tras migrar la base a 10.6.16.10; no equivalen a una revisión publicada.",
+  "verifiedAt": "2026-09-18",
+  "sources": [
+    {
+      "component": "interfaz",
+      "path": "src/App.jsx",
+      "label": "Interfaz y operaciones",
+      "sha256": "479e3d55d42ce135a35642820a921d963b224b0637d3934a3db4e7e06eabbb27"
+    },
+    {
+      "component": "interfaz",
+      "path": "src/main.jsx",
+      "label": "Estilos y proveedor SANNA",
+      "sha256": "3f890249407eef7965c9b799297c6a7fb5f08316added19ec71f2b21b96fdd15"
+    },
+    {
+      "component": "apiLocal",
+      "path": "server/index.js",
+      "label": "Rutas y escucha local",
+      "sha256": "f19e2b62c992b2b994c79ff162918689a07b5d616970a5f19d99c8a40db28b77"
+    },
+    {
+      "component": "repositorio",
+      "path": "server/repository.js",
+      "label": "Persistencia e historial",
+      "sha256": "e36642309e0bf49b83ddfab1268948c516ebca7ad81e1da89e181c6bca12f8f8"
+    },
+    {
+      "component": "repositorio",
+      "path": "server/model.js",
+      "label": "Validación Zod",
+      "sha256": "127a653ea10e5b54754cd3be59c2502e2c319090d40fef7393fff1b6c3a2f6b7"
+    },
+    {
+      "component": "baseLocal",
+      "path": "server/db.js",
+      "label": "Conexión ODBC al servidor configurado",
+      "sha256": "8a483cc2ba62493fa8347e3a56a93c06edfa4cee21b4782343b5012a813a597c"
+    },
+    {
+      "component": "baseLocal",
+      "path": "database/schema.sql",
+      "label": "Cuatro tablas",
+      "sha256": "940dd11de007101cc994e06a992b8c881e0cd501c4afdf73f2e50faeb3d753cb"
+    },
+    {
+      "component": "recursos",
+      "path": "vite.config.js",
+      "label": "Build y fuentes locales",
+      "sha256": "a60a6a8c048c9d17cdffe4ef43fbd2dbbcea2328878f522d6ba9c1487af0dace"
+    },
+    {
+      "component": "recursos",
+      "path": "server/index.js",
+      "label": "Archivos estáticos",
+      "sha256": "f19e2b62c992b2b994c79ff162918689a07b5d616970a5f19d99c8a40db28b77"
+    },
+    {
+      "component": "restricciones",
+      "path": "server/index.js",
+      "label": "Middleware de acceso",
+      "sha256": "f19e2b62c992b2b994c79ff162918689a07b5d616970a5f19d99c8a40db28b77"
+    },
+    {
+      "component": "restricciones",
+      "path": "src/api.js",
+      "label": "Cabecera del cliente",
+      "sha256": "914e7316c3eb3a9436313946f8946dd4c8876d42beb6be24d3209b0072b23d12"
+    },
+    {
+      "component": "claveLocal",
+      "path": "server/crypto.js",
+      "label": "AES-256-GCM",
+      "sha256": "66a5fef2dc8c4d975f3ecc91c0e3a7c0bf6d36f68f29bf6f38c9f95564639afe"
+    },
+    {
+      "component": "claveLocal",
+      "path": "scripts/setup.js",
+      "label": "Creación y permisos",
+      "sha256": "59952c35c81f9a568370bfaf0b9362a05efa1360d2077b7451e4a6a01e31617d"
+    },
+    {
+      "component": "copiaSql",
+      "path": "scripts/backup-database.js",
+      "label": "COPY_ONLY y CHECKSUM",
+      "sha256": "077fec56a8813fab09a77aedae6acb3b4e87c7ea44893e1c9fecae2dfcd28988"
+    },
+    {
+      "path": "src/Editor.jsx",
+      "sha256": "3c9ab999c6be02b4a782dc9baa18d6b913b3f6ae043a8f064f42a8d4fc439b3c",
+      "label": "Borrador y resolución de conflictos",
+      "component": "editorNota"
+    },
+    {
+      "path": "src/Managers.jsx",
+      "sha256": "3408f41e15beec0ddbd0b570f0907f2f4d6d5c5139366575ccfb6e2cd1c19da4",
+      "label": "Vista previa, importación y exportación",
+      "component": "resumenImportar"
+    },
+    {
+      "path": "src/backup.js",
+      "sha256": "60de39079b1e40e291722b45683c0b92aa5cca585f0f33d5f6c2cf1e9b704234",
+      "label": "PBKDF2 y AES-GCM en el navegador",
+      "component": "aperturaWeb"
+    },
+    {
+      "path": "src/NoteViews.jsx",
+      "sha256": "9dac7b17a99bdc4b06e75137529ff03eb09d18befdd3b9246e515a01b01da611",
+      "label": "Tabla, agenda y consulta",
+      "component": "interfaz"
+    },
+    {
+      "path": "package.json",
+      "sha256": "ab3afa8b05479ee48fc643e7f83bf491ee51d7f25099f01d75252d977237ee0a",
+      "label": "Dependencias y comandos",
+      "component": "recursos"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "03170f7174be7553d9045e8f1de369e9fe2a5b21c2c6845eb8dc7485f396d212",
+      "label": "Resolución de dependencias",
+      "component": "recursos"
+    },
+    {
+      "path": "start-apuntes.ps1",
+      "sha256": "1577719f367cd44b4382bcfbf1ae4c24b200cef88c0a511933b3612d4a4b5f22",
+      "label": "Lanzador local",
+      "component": "operacion"
+    },
+    {
+      "path": ".github/workflows/static.yml",
+      "sha256": "441595440fea647d0424a91f631da4630b1da7d539756e6cec091178f8b462c3",
+      "label": "Publicación del HTML original",
+      "component": "publicacion"
+    },
+    {
+      "component": "interfaz",
+      "path": "src/utils.js",
+      "label": "Estados y filtros",
+      "sha256": "e185397d0880a832463e9b5c04a74dadbd41d6c6a7ba6f6466bfa7defd2d92df"
+    },
+    {
+      "component": "baseLocal",
+      "path": "server/db-config.js",
+      "label": "Autenticación Windows o SQL y opciones ODBC",
+      "sha256": "114b1f057ff0f092870d7186e6c00d7b63e540305e53055f27b5a1e252974e51"
+    },
+    {
+      "component": "baseLocal",
+      "path": ".env.example",
+      "label": "Configuración de ejemplo sin contraseña",
+      "sha256": "fc30fc296ed00159d9727c4c6d8b8ad97733e0068b94cf6c4efc4a9476a3f45a"
+    },
+    {
+      "component": "operacion",
+      "path": "scripts/integration-test.js",
+      "label": "Suite aislada en LocalDB",
+      "sha256": "a1f5110a1d2a9d2fb35c215cee6f9cae3278b5d403015f01218961d6029f538f"
+    },
+    {
+      "component": "baseLocal",
+      "path": "tests/db-config.test.js",
+      "label": "Validación y escape de credenciales SQL",
+      "sha256": "482933790e260e13e3e0bbdf5104f4a8c93c629c9e4c2b6147692d56b540f04d"
+    }
+  ]
+}

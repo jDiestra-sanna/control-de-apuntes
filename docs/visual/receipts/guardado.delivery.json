@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "C:\\Users\\jdiestra\\Desktop\\control-de-apuntes\\docs\\visual\\guardado.sequence.json",
+  "output": "C:\\Users\\jdiestra\\Desktop\\control-de-apuntes\\docs\\visual\\guardado.html",
+  "specification": {
+    "sha256": "eb745cd23def268b60f68cc2453a642be49a42fec18cd63781a6b8dfa2862bf8",
+    "bytes": 3813
+  },
+  "artifact": {
+    "sha256": "8c857d4b1ac990c5ded2445256d59411b85fe01db1d8d3f688b3bdc64b7c87ed",
+    "bytes": 707407
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

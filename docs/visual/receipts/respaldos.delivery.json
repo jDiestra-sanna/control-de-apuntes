@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "dataflow",
+  "input": "C:\\Users\\jdiestra\\Desktop\\control-de-apuntes\\docs\\visual\\respaldos.dataflow.json",
+  "output": "C:\\Users\\jdiestra\\Desktop\\control-de-apuntes\\docs\\visual\\respaldos.html",
+  "specification": {
+    "sha256": "52c69047552c7a2f37d702eb83213db8edb9920a9949285cde04448e87d79c0a",
+    "bytes": 3706
+  },
+  "artifact": {
+    "sha256": "d439b622e2d8edc6dbd30087b5dc2da75d701aa20a798d7d51cb62366b10c298",
+    "bytes": 708265
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

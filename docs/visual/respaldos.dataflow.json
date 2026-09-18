@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Apuntes · importar un respaldo",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      650
+    ],
+    "legend": {
+      "entries": {
+        "default": {
+          "label": "Transferencia"
+        },
+        "emphasis": {
+          "label": "Importación"
+        },
+        "security": {
+          "label": "Cifrado"
+        },
+        "database": {
+          "label": "Almacenamiento"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "Archivo"
+    },
+    {
+      "label": "Descifrado"
+    },
+    {
+      "label": "Revisión"
+    },
+    {
+      "label": "Validación"
+    },
+    {
+      "label": "Persistencia"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "archivoOriginal",
+      "type": "external",
+      "label": "Respaldo cifrado",
+      "sublabel": ".enc.json · hasta 15 MB",
+      "stage": 0,
+      "row": 2,
+      "width": 140,
+      "height": 64
+    },
+    {
+      "id": "aperturaWeb",
+      "type": "security",
+      "label": "Web Crypto",
+      "sublabel": "PBKDF2 + AES-GCM",
+      "stage": 1,
+      "row": 2,
+      "width": 140,
+      "height": 64
+    },
+    {
+      "id": "resumenImportar",
+      "type": "frontend",
+      "label": "Vista previa",
+      "sublabel": "Confirmación del usuario",
+      "stage": 2,
+      "row": 2,
+      "width": 140,
+      "height": 64
+    },
+    {
+      "id": "apiImportar",
+      "type": "backend",
+      "label": "API local",
+      "sublabel": "POST /api/import",
+      "stage": 3,
+      "row": 2,
+      "width": 140,
+      "height": 64
+    },
+    {
+      "id": "persistirImportacion",
+      "type": "database",
+      "label": "SQL Server",
+      "sublabel": "Nuevas notas + registro",
+      "stage": 4,
+      "row": 2,
+      "width": 140,
+      "height": 64
+    },
+    {
+      "id": "secretoTemporal",
+      "type": "security",
+      "label": "Contraseña",
+      "sublabel": "Solo durante la apertura",
+      "stage": 1,
+      "row": 0,
+      "width": 140,
+      "height": 64
+    }
+  ],
+  "flows": [
+    {
+      "id": "abrirCifrado",
+      "from": "archivoOriginal",
+      "to": "aperturaWeb",
+      "label": "AES-GCM",
+      "variant": "security"
+    },
+    {
+      "id": "derivarClave",
+      "from": "secretoTemporal",
+      "to": "aperturaWeb",
+      "label": "Derivar clave",
+      "variant": "security",
+      "labelAt": [
+        315,
+        206
+      ]
+    },
+    {
+      "id": "mostrarResumen",
+      "from": "aperturaWeb",
+      "to": "resumenImportar",
+      "label": "JSON"
+    },
+    {
+      "id": "enviarDatos",
+      "from": "resumenImportar",
+      "to": "apiImportar",
+      "label": "HTTP",
+      "variant": "emphasis"
+    },
+    {
+      "id": "importacionAtomica",
+      "from": "apiImportar",
+      "to": "persistirImportacion",
+      "label": "SQL",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Importación aditiva",
+      "items": [
+        "Zod valida todo antes de escribir.",
+        "Se omiten IDs existentes; la huella evita repeticiones."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Exportación desde la web",
+      "items": [
+        "Incluye todas las notas actuales y sus categorías.",
+        "AES-GCM + PBKDF2; no contiene el historial."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Recuperación completa",
+      "items": [
+        "El .bak conserva también las versiones.",
+        "Requiere conservar la clave .local/master.key."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\jdiestra\\Desktop\\control-de-apuntes\\docs\\visual\\arquitectura.architecture.json",
+  "output": "C:\\Users\\jdiestra\\Desktop\\control-de-apuntes\\docs\\visual\\arquitectura.html",
+  "specification": {
+    "sha256": "2f6b879edfaef7aae1a7d1853f9cbb3bcc0452c8c7cf4641214955b69827a732",
+    "bytes": 5028
+  },
+  "artifact": {
+    "sha256": "b5339d7bccc3fc321ff57b700fc931eae78a0c8afb4a1d08d3a2a95f41ca18c5",
+    "bytes": 712831
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

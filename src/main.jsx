@@ -1,0 +1,14 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.jsx';
+import { SaToastProvider } from '@sanna-ui/react';
+import '@sanna-ui/react/styles/sanna-tokens.css';
+import '@sanna-ui/react/styles.css';
+import '@fontsource/plus-jakarta-sans/latin-400.css';
+import '@fontsource/plus-jakarta-sans/latin-500.css';
+import '@fontsource/plus-jakarta-sans/latin-600.css';
+import '@fontsource/plus-jakarta-sans/latin-700.css';
+import './styles.css';
+import './sanna-integration.css';
+import './sanna-workspace.css';
+createRoot(document.getElementById('root')).render(<React.StrictMode><SaToastProvider position="bottom-right" maxToasts={3}><App /></SaToastProvider></React.StrictMode>);

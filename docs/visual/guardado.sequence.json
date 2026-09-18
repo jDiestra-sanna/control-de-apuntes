@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Apuntes · guardar una nota",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1000,
+      480
+    ],
+    "column_fit": "spread",
+    "legend": {
+      "entries": {
+        "default": {
+          "label": "Llamada"
+        },
+        "emphasis": {
+          "label": "Escritura"
+        },
+        "return": {
+          "label": "Respuesta"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "editorNota",
+      "type": "frontend",
+      "label": "Editor",
+      "sublabel": "Borrador en memoria"
+    },
+    {
+      "id": "apiNotas",
+      "type": "backend",
+      "label": "API local",
+      "sublabel": "Express"
+    },
+    {
+      "id": "persistenciaNota",
+      "type": "backend",
+      "label": "Repositorio",
+      "sublabel": "Validación y cifrado"
+    },
+    {
+      "id": "sqlNotas",
+      "type": "database",
+      "label": "SQL Server",
+      "sublabel": "ControlDeApuntes"
+    }
+  ],
+  "messages": [
+    {
+      "id": "enviarBorrador",
+      "from": "editorNota",
+      "to": "apiNotas",
+      "y": 160,
+      "label": "PUT /api/notes/:id",
+      "variant": "emphasis",
+      "note": "Incluye revision y campos del borrador."
+    },
+    {
+      "id": "actualizarNota",
+      "from": "apiNotas",
+      "to": "persistenciaNota",
+      "y": 190,
+      "label": "updateNote(id, raw)"
+    },
+    {
+      "id": "leerBajoBloqueo",
+      "from": "persistenciaNota",
+      "to": "sqlNotas",
+      "y": 220,
+      "label": "SERIALIZABLE + UPDLOCK"
+    },
+    {
+      "id": "devolverRevision",
+      "from": "sqlNotas",
+      "to": "persistenciaNota",
+      "y": 250,
+      "label": "Revisión almacenada",
+      "variant": "return"
+    },
+    {
+      "id": "escribirVersion",
+      "from": "persistenciaNota",
+      "to": "sqlNotas",
+      "y": 280,
+      "label": "Notes + NoteVersions",
+      "variant": "emphasis"
+    },
+    {
+      "id": "confirmarTx",
+      "from": "persistenciaNota",
+      "to": "sqlNotas",
+      "y": 310,
+      "label": "COMMIT",
+      "variant": "emphasis",
+      "note": "Espera la confirmación de SQL Server antes de responder."
+    },
+    {
+      "id": "notaActualizada",
+      "from": "persistenciaNota",
+      "to": "apiNotas",
+      "y": 340,
+      "label": "Nota + revisión nueva",
+      "variant": "return"
+    },
+    {
+      "id": "guardadoVisible",
+      "from": "apiNotas",
+      "to": "editorNota",
+      "y": 370,
+      "label": "200 JSON",
+      "variant": "return",
+      "note": "Actualiza la biblioteca, cierra el editor y muestra el aviso."
+    }
+  ],
+  "activations": [
+    {
+      "participant": "apiNotas",
+      "from": 160,
+      "to": 378,
+      "type": "backend"
+    },
+    {
+      "participant": "persistenciaNota",
+      "from": 190,
+      "to": 348,
+      "type": "backend"
+    },
+    {
+      "participant": "sqlNotas",
+      "from": 220,
+      "to": 318,
+      "type": "database"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Camino correcto",
+      "items": [
+        "La nota y su versión quedan en la misma transacción.",
+        "El guardado es explícito: botón o Ctrl+Enter."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Si la revisión cambió",
+      "items": [
+        "Rollback y HTTP 409; el borrador permanece abierto.",
+        "Se puede guardar una copia o cargar la versión actual."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Si falla una operación",
+      "items": [
+        "La transacción no deja escrituras parciales.",
+        "Un fallo de red conserva el borrador para reintentar."
+      ]
+    }
+  ]
+}

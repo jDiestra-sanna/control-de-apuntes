@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Apuntes · arquitectura con SQL remoto",
+    "quality_profile": "showcase",
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "Interfaz"
+        },
+        "backend": {
+          "label": "Aplicación"
+        },
+        "database": {
+          "label": "Datos"
+        },
+        "security": {
+          "label": "Protección"
+        },
+        "external": {
+          "label": "Respaldo"
+        }
+      }
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [
+      60,
+      90
+    ],
+    "cols": 4,
+    "cellW": 205,
+    "cellH": 84,
+    "gapX": 145,
+    "gapY": 135
+  },
+  "components": [
+    {
+      "id": "interfaz",
+      "type": "frontend",
+      "label": "React + SANNA",
+      "sublabel": "Editor y cinco vistas",
+      "row": 1,
+      "col": 0,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "apiLocal",
+      "type": "backend",
+      "label": "Express",
+      "sublabel": "127.0.0.1:3188",
+      "row": 1,
+      "col": 1,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "repositorio",
+      "type": "backend",
+      "label": "Repositorio",
+      "sublabel": "Revisiones + transacciones",
+      "row": 1,
+      "col": 2,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "baseLocal",
+      "type": "database",
+      "label": "SQL Server 2019",
+      "sublabel": "ControlDeApuntes",
+      "row": 1,
+      "col": 3,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "recursos",
+      "type": "frontend",
+      "label": "Compilación Vite",
+      "sublabel": "dist/ + fuentes locales",
+      "row": 0,
+      "col": 0,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "restricciones",
+      "type": "security",
+      "label": "Acceso local",
+      "sublabel": "Host, Origin y cabecera",
+      "row": 0,
+      "col": 1,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "claveLocal",
+      "type": "security",
+      "label": "Clave de cifrado",
+      "sublabel": ".local/master.key",
+      "row": 0,
+      "col": 2,
+      "size": [
+        205,
+        60
+      ]
+    },
+    {
+      "id": "copiaSql",
+      "type": "external",
+      "label": "Respaldo SQL",
+      "sublabel": ".bak en el servidor SQL",
+      "row": 2,
+      "col": 3,
+      "size": [
+        205,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Equipo Windows · espacio personal",
+      "wraps": [
+        "interfaz",
+        "apiLocal",
+        "repositorio",
+        "recursos",
+        "restricciones",
+        "claveLocal"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "SQL remoto · 10.6.16.10",
+      "wraps": [
+        "baseLocal",
+        "copiaSql"
+      ],
+      "pad": 28
+    }
+  ],
+  "connections": [
+    {
+      "id": "solicitud",
+      "from": "interfaz",
+      "to": "apiLocal",
+      "label": "HTTP + JSON",
+      "variant": "emphasis"
+    },
+    {
+      "id": "operacion",
+      "from": "apiLocal",
+      "to": "repositorio",
+      "label": "Operaciones",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persistencia",
+      "from": "repositorio",
+      "to": "baseLocal",
+      "label": "ODBC + TLS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cargaInterfaz",
+      "from": "recursos",
+      "to": "interfaz",
+      "label": "JS + CSS",
+      "labelAt": [
+        120,
+        164
+      ]
+    },
+    {
+      "id": "validacionAcceso",
+      "from": "restricciones",
+      "to": "apiLocal",
+      "label": "Filtro HTTP",
+      "variant": "security",
+      "labelAt": [
+        470,
+        164
+      ]
+    },
+    {
+      "id": "cifradoPayload",
+      "from": "claveLocal",
+      "to": "repositorio",
+      "label": "AES-256-GCM",
+      "variant": "security",
+      "labelAt": [
+        820,
+        164
+      ]
+    },
+    {
+      "id": "backupCompleto",
+      "from": "baseLocal",
+      "to": "copiaSql",
+      "label": "Copia con historial",
+      "variant": "dashed",
+      "labelAt": [
+        1170,
+        383
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "En el navegador",
+      "items": [
+        "Borrador y búsqueda en memoria.",
+        "localStorage conserva solo la vista."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Guardado durable",
+      "items": [
+        "Notes y NoteVersions se escriben juntas.",
+        "Una revisión distinta devuelve HTTP 409."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Acceso y recuperación",
+      "items": [
+        "Credenciales SQL en .env local.",
+        "Conservar .bak y master.key original."
+      ]
+    }
+  ]
+}

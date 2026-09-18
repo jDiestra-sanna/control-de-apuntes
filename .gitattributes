@@ -1,0 +1,2 @@
+# Preserve generated documentation bytes so delivery receipt hashes stay valid.
+docs/visual/** -text whitespace=trailing-space,space-before-tab,cr-at-eol
