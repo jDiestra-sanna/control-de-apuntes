@@ -1,5 +1,5 @@
 {
-  "scope": "Archivos locales revisados tras migrar la base a 10.6.16.10; no equivalen a una revisión publicada.",
+  "scope": "Fuentes locales revisadas con lanzadores Windows local 3188 y servidor 5179. Los diagramas representan el perfil local; la guia de operacion documenta ambos perfiles.",
   "verifiedAt": "2026-09-18",
   "sources": [
     {
@@ -124,7 +124,7 @@
     },
     {
       "path": "start-apuntes.ps1",
-      "sha256": "1577719f367cd44b4382bcfbf1ae4c24b200cef88c0a511933b3612d4a4b5f22",
+      "sha256": "30e820de09f0ced8623934492d42b118f151e3541f58f2a2561c1def6dd43b86",
       "label": "Lanzador local",
       "component": "operacion"
     },
@@ -150,7 +150,7 @@
       "component": "baseLocal",
       "path": ".env.example",
       "label": "Configuración de ejemplo sin contraseña",
-      "sha256": "fc30fc296ed00159d9727c4c6d8b8ad97733e0068b94cf6c4efc4a9476a3f45a"
+      "sha256": "e5e7e584facb8ed2c2c34e28c5bee9dca33adb0b0a10be0bf1b4a38a8649eb86"
     },
     {
       "component": "operacion",
@@ -163,6 +163,48 @@
       "path": "tests/db-config.test.js",
       "label": "Validación y escape de credenciales SQL",
       "sha256": "482933790e260e13e3e0bbdf5104f4a8c93c629c9e4c2b6147692d56b540f04d"
+    },
+    {
+      "component": "operacion",
+      "path": "levantar-proyecto.bat",
+      "label": "Inicio con perfiles y puertos fijos",
+      "sha256": "320ef21b8362381a20bfba11f1ae34da64d51f75cfaf094492fecd4999eb6a09"
+    },
+    {
+      "component": "operacion",
+      "path": "cerrar-proyecto.bat",
+      "label": "Cierre limitado a procesos del proyecto",
+      "sha256": "acbd150028ddff389b97f2b2a78d0337b4c7b1dec518dbf9eaaad826802fdad5"
+    },
+    {
+      "component": "operacion",
+      "path": "deploy/windows/common.ps1",
+      "label": "Identidad de procesos, perfiles y bloqueo",
+      "sha256": "a1f79d9b245d3612bb341ab128b6c14ff5174060d91d5e1f430bc7c87cf0a1b5"
+    },
+    {
+      "component": "operacion",
+      "path": "deploy/windows/project.ps1",
+      "label": "Controlador Windows de inicio y cierre",
+      "sha256": "7417e4b426a6fef0a3ab38d894f725a3df24c387a174a3cec8fe85e2e5d93fed"
+    },
+    {
+      "component": "operacion",
+      "path": "scripts/check-runtime.js",
+      "label": "Preflight SQL y clave de solo lectura",
+      "sha256": "5c977e6e8aad05341e149d42794045ac39b5391c96d25e766e0dd4f769a0dc98"
+    },
+    {
+      "component": "operacion",
+      "path": "scripts/test-launchers.ps1",
+      "label": "Pruebas reales de los lanzadores",
+      "sha256": "4cb63b825fb7f20ed7c18d6306b6de5da2abf4c39be7c0e87143e38b994b03d7"
+    },
+    {
+      "component": "operacion",
+      "path": "docs/operacion-windows.md",
+      "label": "Guia de operacion local y servidor",
+      "sha256": "ec9f6377ff8fdf99cac04bb63f83d14aacdd150fad5188618e5b2920db569e02"
     }
   ]
 }

@@ -109,3 +109,13 @@ Las 24 pruebas unitarias (incluidas cinco nuevas de configuración y escape ODBC
 Prueba remota adicional: INSERT/lectura/descifrado de una nota sintética y su versión dentro de una transacción revertida, seguida de comparación de huellas sin cambios. Una sesión independiente de Edge recorrió tarjetas, tabla, agenda y kanban, con escrituras HTTP bloqueadas; confirmó 85 notas, 7 categorías y 84 activas, sin errores JavaScript. El health reportó el servidor 10.6.16.10 y autenticación SQL. Se generó también un .bak remoto con CHECKSUM y RESTORE VERIFYONLY; ese archivo está en el servidor, no descargado al cliente.
 
 Evidencia y rutas: [migracion-sql-server.md](migracion-sql-server.md), `.local/sql-migration-result.json`, `.local/qa/remote-sql-review.json` y recibos de `.local/backups`. Las credenciales y la clave están excluidas de Git. No se realizó QA multiusuario ni despliegue remoto de la web.
+
+## Lanzadores Windows: local y servidor
+
+Se añadieron `levantar-proyecto.bat` y `cerrar-proyecto.bat`, con puertos fijos 3188 (local) y 5179 (servidor), compartidos por la web y la API. Se conservaron los accesos anteriores y se separó la instalación explícita del arranque habitual. El preflight consulta SQL y comprueba la clave sin ejecutar DDL, migraciones ni escrituras de notas.
+
+Pasaron las 13 pruebas operativas de `scripts/test-launchers.ps1`: ayuda y errores de argumentos; cierre repetido; colisión con un proceso ajeno; PID obsoleto; metadatos del otro perfil; bloqueo de operaciones simultáneas; rutas con espacios; comprobación sin arranque; puerto servidor fijo pese a PORT externo; reutilización del PID; rechazo de instalación con la aplicación abierta; independencia de perfiles; y cierre conjunto. La suite termina con el perfil local iniciado. Los procesos del proyecto de referencia en 3002/5176 conservaron sus PID.
+
+Edge verificó la aplicación iniciada por el nuevo lanzador: 24 tarjetas en la primera página, SQL Server 10.6.16.10, cero errores JavaScript y cero escrituras HTTP. La compilación pasó y se comprobó su reutilización. El índice documental pasó enlaces, ausencia de desbordamiento e inspección automática de accesibilidad en 1440×1000 y 390×844. Evidencias locales: `.local/qa/launchers.json`, `.local/qa/launcher-browser.json` y `.local/qa/docs-review.json`.
+
+Los dos perfiles se probaron en este Windows. El puerto 5179 deberá comprobarse de nuevo en el host destino, como hace automáticamente el lanzador. El perfil servidor sigue escuchando en 127.0.0.1; no se desplegó la web ni se habilitó acceso por LAN. [Operación y preparación del servidor](operacion-windows.md).

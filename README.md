@@ -8,29 +8,29 @@ Abre la [guía del proyecto](docs/index.html): arquitectura interactiva con Arch
 
 ## Abrir en este equipo
 
-Haz doble clic en **Iniciar Apuntes.cmd** o ejecuta desde esta carpeta:
+Haz doble clic en **levantar-proyecto.bat** para iniciar y en **cerrar-proyecto.bat** para cerrar, o ejecuta desde esta carpeta:
 
 ```powershell
-.\start-apuntes.ps1
+.\levantar-proyecto.bat --local
+.\cerrar-proyecto.bat --local
 ```
 
-Dirección: **http://127.0.0.1:3188**. La aplicación se conecta a **SQL Server `10.6.16.10`**, base **`ControlDeApuntes`**, mediante autenticación SQL configurada en `.env`. El lanzador verifica la base, compila e inicia Node sin abrir una consola adicional. Si este proyecto ya ocupa el puerto con la misma configuración SQL, lo reutiliza; si pertenece a otro proceso, se detiene sin tocarlo.
+Dirección local: **http://127.0.0.1:3188**. El perfil servidor usa **http://127.0.0.1:5179** en el host Windows destino. Web y API comparten un puerto fijo por perfil; nunca se elige otro automáticamente. Ambos usan **SQL Server `10.6.16.10`**, base **`ControlDeApuntes`**, configurada en `.env`. El lanzador verifica SQL y la clave sin escrituras, compila cuando hace falta e inicia Node sin una consola adicional. Reutiliza una instancia vigente y rechaza puertos ajenos sin detenerlos. [Guía de local y servidor](docs/operacion-windows.md).
 
 Requisitos: Windows, Node >=22.12, Microsoft ODBC Driver 17 y acceso de red al servidor SQL por TCP 1433. LocalDB solo es necesario para las pruebas de integración o el modo local opcional. No se cambiaron otras bases ni servicios del servidor compartido.
 
 ## Instalación reproducible
 
 ```powershell
-node scripts/install.js
-# Preparar .env y la clave original antes de conectar a una base existente.
-npm run db:setup
-npm run build
-npm start
+.\levantar-proyecto.bat --install-dependencies
+# Preparar .env y la clave original antes de conectar a la base existente.
+.\levantar-proyecto.bat --local --check
+.\levantar-proyecto.bat --local
 ```
 
 El instalador ejecuta `npm ci` con una conversión temporal de GitHub SSH a HTTPS, porque npm puede normalizar la referencia del Design System a SSH. No cambia la configuración global de Git. Hace falta acceso al repositorio del paquete si no está en caché.
 
-Desarrollo: `npm run dev` sirve la API y Vite en el mismo puerto 3188. La configuración activa está en `.env`, excluida de Git y con permisos Windows restringidos. `.env.example` contiene campos de ejemplo, sin contraseña. El lanzador usa 3188; para otro puerto usa `npm start` o `npm run dev` con `PORT` configurado.
+Desarrollo: `npm run dev` sirve la API y Vite en el mismo puerto 3188. La configuración activa está en `.env`, excluida de Git y con permisos Windows restringidos. `.env.example` contiene campos de ejemplo, sin contraseña. Los `.bat` usan `--local` (3188) o `--servidor` (5179), con prioridad sobre `PORT`; sin opción usan `APUNTES_PROFILE` o local. `cerrar-proyecto.bat --todos` cierra ambos perfiles. `Iniciar Apuntes.cmd` y `start-apuntes.ps1` conservan compatibilidad. El aprovisionamiento `npm run db:setup` es explícito, no parte del arranque habitual.
 
 Para trasladar el cliente a otro equipo, conserva el código, `.env` y **la misma `.local/master.key`**, y habilita acceso al servidor SQL. La base permanece centralizada. El detalle de la migración, las rutas del servidor y la recuperación están en [Migración a SQL Server](docs/migracion-sql-server.md). Sin `.env`, el modo alternativo sigue usando `(localdb)\ApuntesLocal` con autenticación Windows.
 

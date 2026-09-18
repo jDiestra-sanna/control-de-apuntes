@@ -1,3 +1,3 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0start-apuntes.ps1"
-if errorlevel 1 pause
+call "%~dp0levantar-proyecto.bat" %*
+exit /b %errorlevel%

@@ -2,6 +2,8 @@
 
 Abre [index.html](index.html) en un navegador para consultar la guía completa: uso, arquitectura, datos, API, arranque, respaldo, recuperación y límites del producto. Se puede abrir directamente desde disco; no requiere que la aplicación ni SQL estén iniciados. Mantén la carpeta `docs/` completa para conservar enlaces y capturas.
 
+[Operación Windows: local y servidor](operacion-windows.md) explica los dos `.bat`, puertos fijos 3188/5179, instalación, cierre y preparación de otro host. Los diagramas existentes representan el perfil local; ambos perfiles conservan la misma arquitectura y conexión SQL.
+
 ## Diagramas Archify
 
 | Recorrido | Tipo | HTML | Fuente editable |
