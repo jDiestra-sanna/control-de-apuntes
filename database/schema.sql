@@ -42,4 +42,12 @@ BEGIN
   CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME()
  );
 END;
+IF OBJECT_ID(N'dbo.SyncOperations', N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.SyncOperations (
+  Id uniqueidentifier NOT NULL PRIMARY KEY,
+  Payload nvarchar(max) NOT NULL,
+  AppliedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME()
+ );
+END;
 COMMIT;

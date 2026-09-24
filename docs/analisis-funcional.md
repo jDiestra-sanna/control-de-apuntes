@@ -25,14 +25,14 @@ Revisión realizada sobre `Control de apuntesv2.html` y la estructura del respal
 1. Capturar una nota en blanco o desde plantillas de reunión, consulta SQL o tareas.
 2. Organizarla con categoría, etiquetas, prioridad y fecha; fijarla si necesita acceso rápido.
 3. Buscarla o revisarla en tarjetas/lista. Los filtros se conservan al modificar notas.
-4. Llevarla de Por organizar a Por hacer, En progreso y Completado mediante arrastre o selectores accesibles.
+4. Mantenerla Fuera del tablero o llevarla a Por hacer, En progreso, En validación y Completado mediante arrastre o selectores accesibles. El kanban muestra solamente esas cuatro columnas y cuenta únicamente sus notas.
 5. Guardar cambios explícitamente; cada guardado genera una versión. Un conflicto conserva el borrador en pantalla y exige actualizar antes de reintentar.
 6. Archivar cuando solo deba conservarse, o mover a papelera con opción de deshacer/restaurar.
 7. Descargar respaldos cifrados o importar el archivo anterior sin reemplazar datos actuales.
 
 ## Migración inicial
 
-El respaldo tenía 85 notas, 6 categorías, 3 fijadas y 1 archivada. Se preservaron identificadores, títulos, contenido, etiquetas y fechas; las nuevas propiedades tienen valores iniciales explícitos. Las notas empiezan en **Por organizar**, porque el original no tenía estado kanban. Se conserva la categoría General del espacio recién creado, además de las categorías importadas.
+El respaldo tenía 85 notas, 6 categorías, 3 fijadas y 1 archivada. Se preservaron identificadores, títulos, contenido, etiquetas y fechas; las nuevas propiedades tienen valores iniciales explícitos. Las notas se importaron inicialmente en **Por organizar**, porque el original no tenía estado kanban. Ese estado ahora se llama **Fuera del tablero** y conserva el identificador `inbox`, sin modificar las notas ni sus versiones. Se conserva la categoría General del espacio recién creado, además de las categorías importadas.
 
 El original y una copia cifrada con SHA-256 se conservaron. La contraseña no está en código, `.env`, scripts ni archivos de configuración. El reporte local de verificación contiene únicamente cantidades y huellas, no el contenido de las notas.
 

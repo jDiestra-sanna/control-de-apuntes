@@ -12,4 +12,5 @@ import './styles.css';
 import './sanna-integration.css';
 import './sanna-workspace.css';
 import './note-media.css';
+import './solutions.css';
 createRoot(document.getElementById('root')).render(<React.StrictMode><SaToastProvider position="bottom-right" maxToasts={3}><App /></SaToastProvider></React.StrictMode>);

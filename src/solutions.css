@@ -1,0 +1,971 @@
+/* Estilos para el Centro de Soluciones TI y Tickets Recurrentes */
+
+.solutions-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.solutions-header-card {
+  background: linear-gradient(135deg, #f7faf7 0%, #eef5f0 100%);
+  border: 1px solid #dbe8dd;
+  border-radius: var(--sanna-radius, 12px);
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.solutions-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.solutions-title-group h2 {
+  font-size: 22px;
+  font-weight: 650;
+  color: #1f3927;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.solutions-title-group p {
+  font-size: 13px;
+  color: #556c5c;
+  margin-top: 6px;
+  max-width: 800px;
+  line-height: 1.5;
+}
+
+.solutions-stats-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sol-stat-pill {
+  background: #ffffff;
+  border: 1px solid #d5e4d8;
+  border-radius: 8px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: #3b5343;
+  box-shadow: 0 1px 3px rgba(30, 60, 40, 0.05);
+}
+
+.sol-stat-pill strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #245843;
+}
+
+.sol-stat-pill svg {
+  color: #31765c;
+}
+
+/* Pestañas de navegación de soluciones */
+.solutions-nav-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e2ece4;
+  padding-bottom: 2px;
+  overflow-x: auto;
+}
+
+.sol-tab-btn {
+  background: none;
+  border: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #637769;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sol-tab-btn:hover {
+  color: #245843;
+  background: #edf5ef;
+}
+
+.sol-tab-btn.active {
+  color: #245843;
+  border-bottom-color: #31765c;
+  background: #ffffff;
+}
+
+.sol-tab-badge {
+  background: #e3ede5;
+  color: #2e624b;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.sol-tab-btn.active .sol-tab-badge {
+  background: #31765c;
+  color: #ffffff;
+}
+
+/* Barra de filtros de soluciones */
+.solutions-filterbar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #e4eae4;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.sol-filter-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sol-search-wrap {
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+}
+
+.sol-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  font-size: 13px;
+  border: 1px solid #d4ded6;
+  border-radius: 7px;
+  outline: none;
+  background: #fafbfa;
+}
+
+.sol-search-input:focus {
+  border-color: #31765c;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(49, 118, 92, 0.15);
+}
+
+.sol-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8fa093;
+  pointer-events: none;
+}
+
+.sol-select-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sol-select-field {
+  padding: 8px 12px;
+  font-size: 12px;
+  border: 1px solid #d4ded6;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #334a3a;
+  min-width: 160px;
+}
+
+.sol-tags-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid #f0f4f1;
+}
+
+.sol-tags-label {
+  font-size: 11px;
+  color: #819586;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.sol-chip-btn {
+  background: #f1f6f2;
+  border: 1px solid #dce8df;
+  color: #496351;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sol-chip-btn:hover,
+.sol-chip-btn.selected {
+  background: #31765c;
+  border-color: #31765c;
+  color: #ffffff;
+}
+
+/* Grilla de soluciones */
+.solutions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solution-card {
+  background: #ffffff;
+  border: 1px solid #e1e9e2;
+  border-radius: 10px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(25, 45, 30, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.solution-card:hover {
+  border-color: #b7cfbc;
+  box-shadow: 0 4px 14px rgba(35, 60, 45, 0.08);
+}
+
+.solution-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.solution-meta-tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.badge-engine {
+  font-size: 11px;
+  font-weight: 650;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.badge-engine.postgresql {
+  background: #e9f2fa;
+  color: #215c8c;
+  border: 1px solid #c9dff2;
+}
+
+.badge-engine.sqlserver {
+  background: #fdf2e9;
+  color: #9c4b18;
+  border: 1px solid #f6d8c0;
+}
+
+.badge-engine.saphana {
+  background: #f5edf8;
+  color: #6a3485;
+  border: 1px solid #e5cfee;
+}
+
+.badge-system {
+  background: #f3f6f3;
+  color: #405747;
+  border: 1px solid #dae4dc;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.badge-server-info {
+  background: #f7faf8;
+  color: #6b8272;
+  border: 1px solid #e2eae3;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.solution-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.solution-title-row h3 {
+  font-size: 16px;
+  font-weight: 650;
+  color: #223c2a;
+  letter-spacing: -0.2px;
+  line-height: 1.4;
+}
+
+.solution-summary {
+  font-size: 12.5px;
+  color: #556c5c;
+  line-height: 1.6;
+}
+
+/* Constructor de Parámetros Interactivo */
+.sol-params-builder {
+  background: #f9fbf9;
+  border: 1px solid #e4ede5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sol-params-title {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #3b5744;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sol-params-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sol-param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  flex: 1;
+}
+
+.sol-param-item label {
+  font-size: 11px;
+  font-weight: 550;
+  color: #607967;
+}
+
+.sol-param-input {
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid #cad9cc;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #27402f;
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.sol-param-input:focus {
+  border-color: #31765c;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(49, 118, 92, 0.12);
+}
+
+/* Caja de Código SQL */
+.sol-code-box {
+  background: #1e2923;
+  border: 1px solid #2e3e34;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sol-code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: #17211b;
+  border-bottom: 1px solid #28372d;
+  font-size: 11px;
+  color: #9cb4a2;
+}
+
+.sol-code-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+.sol-copy-btn {
+  background: #2b3e32;
+  border: 1px solid #3c5444;
+  color: #c8dece;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sol-copy-btn:hover {
+  background: #395242;
+  color: #ffffff;
+  border-color: #4f705a;
+}
+
+.sol-code-content {
+  padding: 14px 16px;
+  margin: 0;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #a4e4b5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  tab-size: 2;
+}
+
+/* Detalles expandibles / Verificación y notas */
+.sol-details-accordion {
+  border-top: 1px solid #ebf1eb;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sol-toggle-details-btn {
+  background: none;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b6b4e;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 0;
+  width: max-content;
+}
+
+.sol-toggle-details-btn:hover {
+  text-decoration: underline;
+}
+
+.sol-expanded-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f7faf7;
+  border: 1px solid #e3ede4;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.sol-verification-title {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #35503d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sol-verification-code {
+  background: #25332a;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #b1dfbd;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.sol-notes-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: #fff8e8;
+  border: 1px solid #f2e2bb;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #79571f;
+  line-height: 1.5;
+}
+
+.sol-notes-alert svg {
+  color: #c98818;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Pie de tarjeta / Botón Crear Apunte */
+.solution-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #f0f4f0;
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+
+.solution-tags-list {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.solution-tag-pill {
+  font-size: 10px;
+  color: #758b7a;
+  background: #f3f6f3;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.sol-create-note-btn {
+  background: #ffffff;
+  border: 1px solid #31765c;
+  color: #245843;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sol-create-note-btn:hover {
+  background: #31765c;
+  color: #ffffff;
+}
+
+/* Vista de Vistas SQL */
+.views-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.view-card {
+  background: #ffffff;
+  border: 1px solid #e1e9e2;
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.view-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1f3927;
+  font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.view-desc {
+  font-size: 12px;
+  color: #556c5c;
+  line-height: 1.5;
+}
+
+.view-query-box {
+  background: #1e2923;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11.5px;
+  color: #a4e4b5;
+  white-space: pre-wrap;
+  position: relative;
+}
+
+.view-query-copy-btn {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  background: #2e3e34;
+  border: 0;
+  color: #c8dece;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+/* Vista de Servidores */
+.servers-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.server-card {
+  background: #ffffff;
+  border: 1px solid #e1e9e2;
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.server-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.server-card-header h4 {
+  font-size: 14px;
+  font-weight: 650;
+  color: #203b29;
+}
+
+.env-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.env-badge.prod {
+  background: #e7f7ed;
+  color: #1e6e39;
+  border: 1px solid #c2eccd;
+}
+
+.env-badge.test {
+  background: #fff8e8;
+  color: #8c6312;
+  border: 1px solid #f2e1b8;
+}
+
+.server-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #496351;
+}
+
+.server-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed #e8efe9;
+}
+
+.server-info-row span:first-child {
+  color: #7b9281;
+}
+
+.server-info-row code {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  background: #f1f6f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #245843;
+}
+
+.server-desc {
+  font-size: 11.5px;
+  color: #637769;
+  line-height: 1.5;
+}
+
+/* Buenas Prácticas */
+.practices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.practice-card {
+  background: #ffffff;
+  border: 1px solid #e1e9e2;
+  border-left: 4px solid #31765c;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.practice-card h4 {
+  font-size: 14px;
+  font-weight: 650;
+  color: #245843;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.practice-card p {
+  font-size: 12.5px;
+  color: #556c5c;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .solutions-header-card {
+    padding: 18px 20px;
+  }
+  .sol-filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sol-select-group {
+    flex-direction: column;
+  }
+  .sol-select-field {
+    width: 100%;
+  }
+  .sol-params-grid {
+    flex-direction: column;
+  }
+  .solution-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sol-create-note-btn {
+    justify-content: center;
+  }
+}
+
+/* Botón de Ejecutar Solución */
+.sol-exec-btn {
+  background: #245843;
+  border: 1px solid #1a4232;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 650;
+  padding: 6px 14px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(36, 88, 67, 0.25);
+  transition: all 0.15s ease;
+}
+
+.sol-exec-btn:hover:not(:disabled) {
+  background: #1b4534;
+  box-shadow: 0 2px 6px rgba(27, 69, 52, 0.35);
+}
+
+.sol-exec-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sol-exec-btn.secondary {
+  background: #ffffff;
+  border-color: #245843;
+  color: #245843;
+  box-shadow: none;
+}
+
+.sol-exec-btn.secondary:hover:not(:disabled) {
+  background: #edf5ef;
+}
+
+/* Panel de Resultados de Ejecución */
+.sol-result-panel {
+  margin-top: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d5e5d8;
+  background: #ffffff;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sol-result-header {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.sol-result-header.success {
+  background: #eef7f0;
+  border-bottom: 1px solid #c8e3cf;
+  color: #1e5a32;
+}
+
+.sol-result-header.error {
+  background: #fdf2f0;
+  border-bottom: 1px solid #f6cfca;
+  color: #9e2a1e;
+}
+
+.sol-result-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+}
+
+.sol-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.sol-result-table-wrap {
+  max-height: 280px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.sol-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  text-align: left;
+}
+
+.sol-result-table th {
+  background: #f4f8f5;
+  color: #3b5744;
+  font-weight: 650;
+  padding: 7px 12px;
+  border-bottom: 1px solid #d8e5db;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.sol-result-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #edf2ee;
+  color: #27402f;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sol-result-table tr:hover td {
+  background: #f9fbf9;
+}
+
+.sol-result-error-body {
+  padding: 14px 16px;
+  font-size: 12px;
+  color: #8c261b;
+  line-height: 1.5;
+  background: #fffafa;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.sol-result-empty {
+  padding: 14px 16px;
+  font-size: 12px;
+  color: #55725e;
+  text-align: center;
+  background: #fafdfa;
+}
+
+/* Modal de Confirmación de Ejecución */
+.sol-confirm-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.sol-confirm-env-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+
+.sol-confirm-env-badge.prod {
+  background: #fdeee9;
+  color: #a43818;
+  border: 1px solid #f9d1c4;
+}
+
+.sol-confirm-env-badge.test {
+  background: #eff7f0;
+  color: #23653b;
+  border: 1px solid #c9e6d1;
+}
+
+.sol-confirm-query-preview {
+  background: #1e2923;
+  color: #a4e4b5;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.sol-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+

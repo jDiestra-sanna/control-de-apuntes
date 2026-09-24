@@ -6,6 +6,10 @@ Espacio personal de notas con React, SANNA Design System, Node y SQL Server. Inc
 
 Abre la [guía del proyecto](docs/index.html): arquitectura interactiva con Archify, secuencia de guardado, importación de respaldos, modelo SQL, contratos API y operación local. Funciona directamente desde disco. Las [fuentes y la guía de mantenimiento](docs/README.md) permiten reproducir los diagramas y consultar su evidencia de validación.
 
+## Trabajar sin VPN
+
+El modo predeterminado guarda notas, imágenes, categorías, papelera e historial en archivos JSON cifrados dentro de `.local/offline/`. Cada guardado confirma primero la escritura local; cada 60 segundos, mientras Node siga en ejecución, sincroniza con SQL Server. La primera descarga completa requiere VPN. Consulta la [guía de almacenamiento local y sincronización](docs/trabajar-sin-vpn.md).
+
 ## Abrir en este equipo
 
 Haz doble clic en **levantar-proyecto.bat** para iniciar y en **cerrar-proyecto.bat** para cerrar, o ejecuta desde esta carpeta:
@@ -15,9 +19,9 @@ Haz doble clic en **levantar-proyecto.bat** para iniciar y en **cerrar-proyecto.
 .\cerrar-proyecto.bat --local
 ```
 
-Dirección local: **http://127.0.0.1:3188**. El perfil servidor usa **http://127.0.0.1:5179** en el host Windows destino. Web y API comparten un puerto fijo por perfil; nunca se elige otro automáticamente. Ambos usan **SQL Server `10.6.16.10`**, base **`ControlDeApuntes`**, configurada en `.env`. El lanzador verifica SQL y la clave sin escrituras, compila cuando hace falta e inicia Node sin una consola adicional. Reutiliza una instancia vigente y rechaza puertos ajenos sin detenerlos. [Guía de local y servidor](docs/operacion-windows.md).
+Dirección local: **http://127.0.0.1:3188**. El perfil servidor usa **http://127.0.0.1:5179** en el host Windows destino. Web y API comparten un puerto fijo por perfil; nunca se elige otro automáticamente. Ambos usan **SQL Server `10.6.16.10`**, base **`ControlDeApuntes`**, configurada en `.env`. El lanzador verifica la copia local y la clave sin depender de la VPN, compila cuando hace falta e inicia Node sin una consola adicional. Reutiliza una instancia vigente y rechaza puertos ajenos sin detenerlos. [Guía de local y servidor](docs/operacion-windows.md).
 
-Requisitos: Windows, Node >=22.12, Microsoft ODBC Driver 17 y acceso de red al servidor SQL por TCP 1433. LocalDB solo es necesario para las pruebas de integración o el modo local opcional. No se cambiaron otras bases ni servicios del servidor compartido.
+Requisitos: Windows, Node >=22.12 y Microsoft ODBC Driver 17. El acceso al servidor SQL por TCP 1433 se necesita para la primera copia y las sincronizaciones; el uso posterior sin VPN funciona sobre los archivos locales. LocalDB solo es necesario para las pruebas de integración o el modo local opcional. No se cambiaron otras bases ni servicios del servidor compartido.
 
 ## Instalación reproducible
 
@@ -32,12 +36,13 @@ El instalador ejecuta `npm ci` con una conversión temporal de GitHub SSH a HTTP
 
 Desarrollo: `npm run dev` sirve la API y Vite en el mismo puerto 3188. La configuración activa está en `.env`, excluida de Git y con permisos Windows restringidos. `.env.example` contiene campos de ejemplo, sin contraseña. Los `.bat` usan `--local` (3188) o `--servidor` (5179), con prioridad sobre `PORT`; sin opción usan `APUNTES_PROFILE` o local. `cerrar-proyecto.bat --todos` cierra ambos perfiles. `Iniciar Apuntes.cmd` y `start-apuntes.ps1` conservan compatibilidad. El aprovisionamiento `npm run db:setup` es explícito, no parte del arranque habitual.
 
-Para trasladar el cliente a otro equipo, conserva el código, `.env` y **la misma `.local/master.key`**, y habilita acceso al servidor SQL. La base permanece centralizada. El detalle de la migración, las rutas del servidor y la recuperación están en [Migración a SQL Server](docs/migracion-sql-server.md). Sin `.env`, el modo alternativo sigue usando `(localdb)\ApuntesLocal` con autenticación Windows.
+Para trasladar el cliente a otro equipo, conserva el código, `.env` y **la misma `.local/master.key`**, y habilita acceso al servidor SQL. La base del servidor se mantiene y cada equipo conserva su copia local. Lleva también `.local/offline/` si necesitas trasladar cambios pendientes, con ambas instancias detenidas. El detalle de la migración, las rutas del servidor y la recuperación están en [Migración a SQL Server](docs/migracion-sql-server.md). Sin `.env`, el modo alternativo sigue usando `(localdb)\ApuntesLocal` con autenticación Windows.
 
 ## Vistas y organización
 
 Los cinco botones junto a «Todas las notas» cambian entre tarjetas, lista, tabla, agenda y kanban. La preferencia de vista se conserva en este navegador.
 
+- **Kanban:** solo muestra **Por hacer**, **En progreso**, **En validación** y **Completado**. Elige **Fuera del tablero** en el editor o la tarjeta para retirar una nota del kanban y conservarla en la biblioteca. Las notas antes llamadas «Por organizar» usan este estado. Una nueva nota en la biblioteca empieza fuera del tablero; creada desde el kanban empieza en Por hacer o en la columna elegida.
 - **Tabla:** ordena al pulsar los encabezados, filtra por columna y cambia la cantidad por página. «Ver» abre una consulta lateral; cerrar conserva la página y los filtros.
 - **Agenda:** selecciona un día para consultar sus notas o crearlas con esa fecha. La pestaña «Sin fecha» reúne las pendientes de programar. Se aplican la búsqueda y los filtros de la biblioteca.
 - **Acciones de una tarjeta:** vista rápida, editar, historial, duplicar, archivar o mover a papelera. La eliminación requiere confirmación y permite deshacer desde la notificación.
@@ -47,6 +52,8 @@ Los cinco botones junto a «Todas las notas» cambian entre tarjetas, lista, tab
 ## Datos, seguridad y recuperación
 
 - Servidor activo: `10.6.16.10`. Base: `ControlDeApuntes`. Usuario SQL configurado: `sa`; contraseña solo en `.env`. Transporte cifrado; `SQL_TRUST_SERVER_CERTIFICATE=true` acepta el certificado del servidor sin validar su cadena de confianza.
+- `dbo.SyncOperations`: recibos cifrados que evitan repetir un cambio si se pierde la respuesta de SQL.
+- `.local/offline/<destino>/workspace.enc.json`: notas, categorías, historial, cola y estado cifrados; `images/`: binarios cifrados separados. Conserva toda la carpeta y la clave original.
 - `dbo.NoteImages`: imágenes cifradas y deduplicadas, conservadas también para versiones anteriores. [Guía de imágenes, editor visual y migración](docs/imagenes-y-editor.md).
 - `dbo.Categories`: identificadores, nombres, colores y orden. `dbo.Notes`: relación con categoría, contenido cifrado, revisión y fechas. `dbo.NoteVersions`: versiones cifradas. `dbo.Imports`: registros de importación por huella SHA-256.
 - Títulos, contenido, etiquetas, tareas y demás propiedades se cifran con AES-256-GCM antes de almacenarse. Identificadores, categorías y fechas quedan como metadatos SQL.
@@ -55,7 +62,7 @@ Los cinco botones junto a «Todas las notas» cambian entre tarjetas, lista, tab
 - Uso local de una persona: Node escucha exclusivamente en `127.0.0.1`, rechaza hosts/orígenes externos y exige un encabezado propio en la API. No incluye cuentas ni permisos multiusuario. Quien tenga acceso a tu sesión Windows y a la aplicación puede consultar las notas. Para exposición en red se requiere una implementación adicional de identidad, autorización y HTTPS.
 - La vista previa de las notas importadas en categorías de acceso se oculta. Al abrirlas puedes consultar su contenido; la opción se puede cambiar individualmente.
 - La papelera es reversible y no tiene vaciado permanente. Archivar es una operación distinta. Las ediciones simultáneas devuelven un conflicto sin sobrescribir silenciosamente la versión actual.
-- No se guardan apuntes ni borradores en `localStorage`; solo la preferencia de vista. Los cambios del editor se guardan con el botón o `Ctrl+Enter`. Cerrar un borrador modificado exige confirmar su descarte. El historial contiene cada guardado, no cada pulsación.
+- Los guardados se conservan cifrados en archivos locales. No se guardan apuntes ni borradores en `localStorage`; solo la preferencia de vista. Los cambios del editor se guardan con el botón o `Ctrl+Enter`. Cerrar un borrador modificado exige confirmar su descarte. El historial contiene cada guardado, no cada pulsación.
 - Dentro de un bloque de código, vuelve a pulsar **Código** o usa **Texto simple** para quitar el formato conservando el contenido. **Continuar debajo del código** crea espacio para escribir fuera del bloque. Usa **Deshacer/Rehacer** o `Ctrl+Z` / `Ctrl+Shift+Z` para corregir cambios del contenido.
 - Guardar incluye la tarea que todavía está escrita en el campo «Nueva tarea». Si otra ventana cambió la nota, el borrador se conserva y puedes guardarlo como copia o cargar la versión actual.
 
@@ -85,6 +92,7 @@ Documentación de herramientas: [SANNA](https://github.com/JDiestra/Design-Syste
 npm test
 npm run build
 npm run test:integration
+node scripts/offline-test.js
 ```
 
 Las pruebas de integración fuerzan LocalDB con autenticación Windows y crean una base aleatoria `ControlDeApuntes_QA...`; no usan el servidor remoto configurado en .env. Levantan una API independiente y Edge headless con datos sintéticos. Comprueban persistencia, cifrado, importación, conflictos, historial, papelera, categorías, kanban, importación/exportación, estilos SANNA y tamaños de pantalla. La base temporal se elimina al finalizar. Evidencia y capturas sintéticas: `.local/qa/` (fuera de Git).
@@ -92,7 +100,7 @@ Las pruebas de integración fuerzan LocalDB con autenticación Windows y crean u
 ## Estructura y publicación
 
 - `src/`: interfaz y utilidades del navegador.
-- `server/`: API, validación, cifrado y repositorio SQL parametrizado.
+- `server/`: API, validación, cifrado, repositorio local, sincronizador y repositorio SQL parametrizado.
 - `database/schema.sql`: esquema inicial idempotente.
 - `scripts/`: instalación, importación, backup y QA.
 - `docs/analisis-funcional.md`: análisis del proyecto original y alcance de la mejora.

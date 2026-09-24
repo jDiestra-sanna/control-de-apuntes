@@ -1,4 +1,6 @@
-export const statuses = [{ id: 'inbox', name: 'Por organizar', color: '#89919f' }, { id: 'todo', name: 'Por hacer', color: '#d6a24c' }, { id: 'doing', name: 'En progreso', color: '#6a8ec7' }, { id: 'done', name: 'Completado', color: '#4c9777' }];
+// Conservamos inbox para que las notas y los respaldos anteriores sigan siendo compatibles.
+export const statuses = [{ id: 'inbox', name: 'Fuera del tablero', color: '#89919f' }, { id: 'todo', name: 'Por hacer', color: '#d6a24c' }, { id: 'doing', name: 'En progreso', color: '#6a8ec7' }, { id: 'review', name: 'En validación', color: '#9273b5' }, { id: 'done', name: 'Completado', color: '#4c9777' }];
+export const boardStatuses = statuses.filter(status => status.id !== 'inbox');
 export const priorities = { none: 'Sin prioridad', low: 'Baja', medium: 'Media', high: 'Alta' };
 export const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export function localDay(date = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
@@ -10,11 +12,12 @@ export function calendarDate(day) { if (!day) return null; const [y, m, d] = day
 export function calendarDay(date) { return date instanceof Date && !isNaN(date) ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : null; }
 // SANNA 0.3.0 espera los encabezados ya ordenados según firstDayOfWeek.
 export const calendarLocale = { months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'], monthsShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'], weekdays: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'], weekdaysMin: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'], today: 'Hoy', clear: 'Quitar fecha', firstDayOfWeek: 1 };
-export function filterNotes(notes, { scope = 'all', query = '', category = '', status = '', priority = '', sort = 'updated' }) {
+export function filterNotes(notes, { scope = 'all', view = 'grid', query = '', category = '', status = '', priority = '', sort = 'updated' }) {
   const term = fold(query.trim());
   const list = notes.filter(n => {
     if (scope === 'trash' ? !n.deletedAt : n.deletedAt) return false;
     if (scope === 'archive' ? !n.archived : scope !== 'trash' && n.archived) return false;
+    if ((scope === 'kanban' || view === 'board') && !boardStatuses.some(status => status.id === n.status)) return false;
     if (scope === 'pinned' && !n.pinned) return false;
     if (scope === 'today' && (!n.dueDate || n.dueDate > localDay() || n.status === 'done')) return false;
     if (category && n.categoryId !== category) return false;

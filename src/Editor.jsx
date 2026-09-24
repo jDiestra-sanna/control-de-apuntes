@@ -149,6 +149,7 @@ export default function Editor({ note, categories, onClose, onSave, onTrash, onR
         </div><aside className="editor-properties"><h4>ORGANIZACIÓN</h4>
           <SaSelect label="Categoría" size="sm" value={draft.categoryId} onValueChange={value => change('categoryId', value)} options={categories} bindValue="id" bindLabel="name" showPlaceholder={false}/>
           <SaSelect label="Estado del kanban" size="sm" value={draft.status} onValueChange={value => change('status', value)} options={statuses} bindValue="id" bindLabel="name" showPlaceholder={false}/>
+          {draft.status === 'inbox' && <small className="muted">Esta nota se guarda en la biblioteca y no aparece en el kanban.</small>}
           <SaSelect label="Prioridad" size="sm" value={draft.priority} onValueChange={value => change('priority', value)} options={Object.entries(priorities).map(([value, label]) => ({ value, label }))} showPlaceholder={false}/>
           <SaCalendar label="Fecha objetivo" size="sm" value={calendarDate(draft.dueDate)} onValueChange={value => change('dueDate', calendarDay(value))} locale={calendarLocale} config={{ showClearButton: true, showTodayButton: true, closeOnSelect: true }} disabled={busy}/>
           <SaInput uppercase={false} ref={tagInput} label="Etiquetas" size="sm" helperText="Separadas por comas · Hasta 20 etiquetas" value={tags} onValueChange={setTags} placeholder="sql, ideas, trabajo"/>

@@ -1,0 +1,137 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { spawn, execFileSync } from 'node:child_process';
+import { once } from 'node:events';
+import { createServer } from 'node:net';
+import sharp from 'sharp';
+import { chromium, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { diskStore, offlineDirectory } from '../server/offline-store.js';
+import { offlineRepository } from '../server/offline-repository.js';
+import { synchronizer } from '../server/offline-sync.js';
+
+process.env.SQL_SERVER = '(localdb)\\ApuntesLocal';
+process.env.SQL_USER = ''; process.env.SQL_PASSWORD = ''; process.env.SQL_ENCRYPT = 'false';
+process.env.SQL_TRUST_SERVER_CERTIFICATE = 'true'; process.env.APUNTES_STORAGE = 'files';
+const database = `ControlDeApuntes_OfflineQA${randomUUID().replaceAll('-', '').slice(0, 10)}`;
+process.env.SQL_DATABASE = database;
+const qaDir = resolve('.local/qa', database); mkdirSync(qaDir, { recursive: true });
+process.env.APUNTES_OFFLINE_ROOT = resolve(qaDir, 'offline');
+const { connect, server } = await import('../server/db.js');
+const { loadKey } = await import('../server/crypto.js');
+const { repository } = await import('../server/repository.js');
+assert.equal(server, '(localdb)\\ApuntesLocal');
+const key = loadKey(), target = `${server.toLowerCase()}/${database.toLowerCase()}`;
+const storeConfig = { directory: offlineDirectory(server, database, process.env.APUNTES_OFFLINE_ROOT), key, target };
+let store = diskStore(storeConfig), local = offlineRepository(store), pool, remote, sync, child, browser, dbOffline = false, created = false;
+const master = await connect('master'), results = [];
+const ok = name => { results.push(name); console.log(`PASS ${name}`); };
+let available = true, loseReply = false;
+function makeSync() { return synchronizer({ store, connectRemote: async () => {
+  if (!available) throw Object.assign(new Error('simulated VPN outage'), { code: 'ENETUNREACH' });
+  return { repo: { syncSnapshot: (...args) => remote.syncSnapshot(...args), applySyncOperation: async op => { const result = await remote.applySyncOperation(op); if (loseReply) { loseReply = false; throw new Error('reply lost after SQL commit'); } return result; } }, close: async () => {} };
+} }); }
+async function startWeb() {
+  const socket = createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening'); const port = socket.address().port; await new Promise(r => socket.close(r));
+  child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, PORT: String(port) }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = ''; child.stdout.on('data', x => { output += x; }); child.stderr.on('data', x => { output += x; });
+  await expect.poll(() => output.includes('Apuntes disponible'), { timeout: 15000 }).toBe(true);
+  return `http://127.0.0.1:${port}`;
+}
+async function stopWeb() { if (child && child.exitCode === null) { child.kill(); await once(child, 'exit'); } child = null; }
+try {
+  await master.request().query(`CREATE DATABASE [${database}]`);
+  created = true;
+  pool = await connect(); remote = repository(pool, key);
+  await pool.request().batch(readFileSync('database/schema.sql', 'utf8'));
+  const cat = await remote.saveCategory({ name: 'Pruebas sin VPN', color: '#557766' });
+  const data = (await sharp({ create: { width: 30, height: 20, channels: 3, background: '#397859' } }).png().toBuffer()).toString('base64');
+  let original = await remote.createNote({ title: 'Original de servidor', content: 'Versión 1', categoryId: cat.id, images: [{ name: 'historial.png', caption: 'Solo en historial', data }] });
+  original = await remote.updateNote(original.id, { ...original, content: 'Versión 2', images: [] });
+  sync = makeSync(); await sync.sync();
+  assert.equal(store.read().initialized, true); assert.equal((await local.notes()).length, 1); assert.equal((await local.history(original.id)).length, 2);
+  const oldImage = (await local.history(original.id)).find(v => v.images.length).images[0];
+  assert.equal((await local.getImage(oldImage.id)).mime, 'image/webp'); ok('Primera copia completa de notas, todas las versiones e imágenes históricas');
+  available = false;
+  let offline = await local.createNote({ title: 'Creada sin VPN', format: 'richtext', content: '<p><strong>Local</strong></p>', categoryId: cat.id, images: [{ name: 'offline.png', data }] });
+  offline = await local.updateNote(offline.id, { ...offline, content: '<p>Segunda edición sin VPN</p>', status: 'review' });
+  await sync.sync(); assert.equal(sync.status().pending, 2);
+  store = diskStore(storeConfig); local = offlineRepository(store); sync = makeSync();
+  assert.equal((await local.getNote(offline.id)).status, 'review');
+  assert.equal((await local.getNote(offline.id)).content, '<p>Segunda edición sin VPN</p>'); assert.equal((await local.history(offline.id)).length, 2); ok('Crear, editar y recuperar cola e imágenes tras reinicio sin VPN');
+  available = true; loseReply = true; await sync.sync(); assert.equal(sync.status().pending, 2);
+  await sync.sync(); assert.equal(sync.status().pending, 0);
+  assert.equal((await remote.getNote(offline.id)).revision, 2); assert.equal((await remote.history(offline.id)).length, 2);
+  assert.equal((await remote.getNote(offline.id)).status, 'review');
+  assert.deepEqual((await remote.history(offline.id)).map(n => n.status).sort(), ['inbox', 'review']);
+  ok('Fuera del tablero y En validación conservan estado e historial tras reiniciar y sincronizar con SQL');
+  assert.equal((await remote.notes()).filter(n => n.id === offline.id).length, 1); ok('Respuesta perdida después del COMMIT: reintento sin notas ni versiones duplicadas');
+  let base = await local.getNote(original.id);
+  base = await local.updateNote(base.id, { ...base, content: 'Mi cambio local 1' });
+  await local.updateNote(base.id, { ...base, content: 'Mi cambio local 2' });
+  await remote.updateNote(original.id, { ...original, content: 'Cambio de otro equipo' });
+  await sync.sync();
+  assert.equal((await remote.getNote(original.id)).content, 'Cambio de otro equipo');
+  const copy = (await remote.notes()).find(n => n.title.includes('copia por conflicto'));
+  assert.ok(copy); assert.equal(copy.content, 'Mi cambio local 2'); assert.equal((await remote.history(copy.id)).length, 2); assert.equal(sync.status().pending, 0);
+  assert.ok((await local.notes()).some(n => n.id === original.id)); assert.ok(sync.status().notices.length); ok('Conflicto entre equipos conserva original y copia, con ediciones posteriores e historial');
+  let releaseGate, started;
+  const gate = new Promise(r => { releaseGate = r; }), inFlight = new Promise(r => { started = r; });
+  let edit = await local.getNote(offline.id); edit = await local.updateNote(edit.id, { ...edit, content: 'Mientras sincroniza 1' });
+  const concurrentSync = synchronizer({ store, connectRemote: async () => ({ repo: { syncSnapshot: (...args) => remote.syncSnapshot(...args), applySyncOperation: async op => { const result = await remote.applySyncOperation(op); started(); await gate; return result; } }, close: async () => {} }) });
+  const running = concurrentSync.sync(); await inFlight;
+  await local.updateNote(edit.id, { ...edit, content: 'Mientras sincroniza 2' }); releaseGate(); await running;
+  assert.equal((await local.getNote(edit.id)).content, 'Mientras sincroniza 2'); await sync.sync(); assert.equal((await remote.getNote(edit.id)).content, 'Mientras sincroniza 2'); ok('Edición durante la sincronización conserva el cambio más reciente y su dependencia');
+  const cat2 = await local.saveCategory({ name: 'Categoría local', color: '#668899' });
+  let moving = await local.getNote(offline.id); await local.updateNote(moving.id, { ...moving, categoryId: cat2.id });
+  await sync.sync(); assert.equal((await remote.getNote(moving.id)).categoryId, cat2.id);
+  await local.saveCategory({ ...cat2, name: 'Renombrada local' }, cat2.id);
+  await remote.saveCategory({ ...cat2, name: 'Renombrada remota' }, cat2.id);
+  await sync.sync(); assert.ok((await remote.categories()).some(c => c.name === 'Renombrada remota')); assert.ok((await local.categories()).some(c => c.name.includes('Renombrada local'))); ok('Categorías creadas sin VPN y conflicto de renombrado conservan ambos nombres');
+  const cats = await local.categories(); await local.reorderCategories(cats.map(c => c.id).reverse()); await sync.sync();
+  const remove = await local.saveCategory({ name: 'Eliminar segura', color: '#998877' }); await sync.sync();
+  await local.deleteCategory(remove.id, cat.id);
+  await remote.createNote({ title: 'Llegó desde otro equipo', categoryId: remove.id }); await sync.sync();
+  assert.ok((await remote.categories()).some(c => c.id === remove.id)); assert.ok((await local.categories()).some(c => c.id === remove.id)); ok('Eliminar categoría no borra notas que llegaron desde otro equipo');
+  const portable = await local.exportData(); const addedId = randomUUID();
+  const imported = { categories: portable.categories, notes: [{ ...portable.notes[0], id: addedId }] };
+  assert.equal((await local.importData(imported)).added, 1); assert.equal((await local.importData(imported)).added, 0); await sync.sync(); assert.ok(await remote.getNote(addedId));
+  let trash = await local.getNote(addedId); trash = await local.updateNote(trash.id, { revision: trash.revision }, 'trash'); await sync.sync(); assert.ok((await remote.getNote(addedId)).deletedAt);
+  await local.updateNote(trash.id, { revision: trash.revision }, 'restore'); await sync.sync(); assert.equal((await remote.getNote(addedId)).deletedAt, null); ok('Importación, respaldo con imágenes, papelera y restauración funcionan desde la copia local');
+  const remoteNew = await remote.createNote({ title: 'Llegó al servidor', categoryId: cat.id }); await sync.sync(); assert.ok(await local.getNote(remoteNew.id));
+  const raw = await pool.request().query('SELECT TOP (1) Payload FROM dbo.SyncOperations'); assert.doesNotMatch(raw.recordset[0].Payload, /content|title|Local/); ok('Descarga de nuevas notas y recibos SQL cifrados');
+  // Real SQL outage in this disposable database; no VPN settings or shared databases change.
+  await pool.close(); pool = null;
+  await master.request().query(`ALTER DATABASE [${database}] SET OFFLINE WITH ROLLBACK IMMEDIATE`); dbOffline = true;
+  const preflight = JSON.parse(execFileSync(process.execPath, ['scripts/check-runtime.js'], { env: process.env, windowsHide: true, encoding: 'utf8', timeout: 10000 }));
+  assert.equal(preflight.storage, 'files'); assert.equal(preflight.initialized, true); ok('Preflight de los lanzadores funciona con SQL desconectado');
+  const baseUrl = await startWeb(); browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto(baseUrl); await expect(page.getByText('Original de servidor', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Nueva nota', exact: true }).first().click();
+  const dialog = page.getByRole('dialog'); await dialog.getByLabel('Título de la nota').fill('Desde navegador sin VPN');
+  await dialog.getByRole('button', { name: 'Markdown', exact: true }).click(); await dialog.getByRole('textbox', { name: 'Contenido de la nota' }).fill('Persistencia desde interfaz sin SQL');
+  await dialog.getByRole('button', { name: 'Guardar nota', exact: true }).click(); await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: 'cambios pendientes' })).toBeVisible();
+  const imageResult = await page.request.get(`${baseUrl}/api/images/${oldImage.id}`, { headers: { 'X-Apuntes-Client': 'local' } }); assert.equal(imageResult.status(), 200);
+  await stopWeb(); const restarted = await startWeb(); await page.goto(restarted);
+  await expect(page.getByText('Desde navegador sin VPN', { exact: true })).toBeVisible();
+  const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze(); assert.deepEqual(audit.violations.map(v => v.id), []);
+  await page.setViewportSize({ width: 390, height: 844 }); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.screenshot({ path: resolve(qaDir, 'offline-mobile.png'), fullPage: true }); assert.deepEqual(errors, []); ok('SQL realmente desconectado: iniciar, guardar desde UI, consultar imágenes y reiniciar; móvil y accesibilidad');
+  await stopWeb(); await master.request().query(`ALTER DATABASE [${database}] SET ONLINE`); dbOffline = false;
+  pool = await connect(); remote = repository(pool, key); store = diskStore(storeConfig); local = offlineRepository(store); sync = makeSync(); await sync.sync();
+  assert.equal(sync.status().pending, 0); assert.ok((await remote.notes()).some(n => n.title === 'Desde navegador sin VPN')); ok('Reconexión real de SQL envía la nota creada tras reiniciar sin conexión');
+  writeFileSync(resolve('.local/qa/offline-results.json'), JSON.stringify({ at: new Date().toISOString(), database, checks: results, errors: [] }, null, 2));
+  console.log(`${results.length} comprobaciones offline completadas.`);
+} finally {
+  await browser?.close(); await stopWeb(); await pool?.close();
+  if (created && /^ControlDeApuntes_OfflineQA[0-9a-f]{10}$/.test(database)) {
+    if (dbOffline) await master.request().query(`ALTER DATABASE [${database}] SET ONLINE`);
+    await master.request().query(`ALTER DATABASE [${database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${database}]`);
+  }
+  await master.close();
+}

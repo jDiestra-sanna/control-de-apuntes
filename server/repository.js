@@ -5,7 +5,8 @@ import { noteSchema, categorySchema, normalizeImport } from './model.js';
 import { prepareImages, MAX_NOTE_IMAGE_BYTES, ImageError } from './images.js';
 import { prepareContent } from './content.js';
 
-export class AppError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
+import { AppError } from './errors.js';
+export { AppError } from './errors.js';
 export function repository(pool, key) {
   const readPayload = payload => prepareContent({ format: 'markdown', images: [], ...decrypt(payload, key) });
   const unpack = r => ({ ...readPayload(r.Payload), id: r.Id, categoryId: r.CategoryId, revision: r.Revision, createdAt: r.CreatedAt.toISOString(), updatedAt: r.UpdatedAt.toISOString(), deletedAt: r.DeletedAt?.toISOString() || null });
@@ -157,5 +158,82 @@ export function repository(pool, key) {
     }
     return data;
   }
-  return { categories, notes, getNote, createNote, updateNote, saveCategory, reorderCategories, deleteCategory, importData, history, getImage, exportData };
+  // A complete, consistent snapshot includes every historical version and image.
+  async function syncSnapshot(knownHashes = []) {
+    const known = new Set(knownHashes);
+    return transaction(async tx => {
+      await tx.request().query('SELECT TOP (0) Id,Payload,AppliedAt FROM dbo.SyncOperations');
+      const cats = await categories(tx);
+      const allNotes = (await tx.request().query('SELECT * FROM dbo.Notes')).recordset.map(unpack);
+      const versions = (await tx.request().query('SELECT NoteId,Revision,Payload,SavedAt FROM dbo.NoteVersions ORDER BY NoteId,Revision')).recordset.map(r => ({ ...readPayload(r.Payload), id: r.NoteId, revision: r.Revision, savedAt: r.SavedAt.toISOString(), historyKey: `remote:${r.NoteId}:${r.Revision}` }));
+      const images = [];
+      for (const row of (await tx.request().query('SELECT Id,Hash FROM dbo.NoteImages')).recordset) images.push({ id: row.Id, hash: row.Hash, ...(known.has(row.Hash) ? {} : { asset: await getImage(row.Id, tx) }) });
+      const imports = (await tx.request().query('SELECT Hash FROM dbo.Imports')).recordset.map(r => r.Hash);
+      return { categories: cats, notes: allNotes, versions, images, imports };
+    });
+  }
+  async function applySyncOperation(op) {
+    if (!/^[0-9a-f-]{36}$/i.test(op.id)) throw new AppError('Operación de sincronización inválida.');
+    const parsed = op.type === 'note' ? noteSchema.parse(op.note) : null;
+    if (parsed) parsed.images = await prepareImages(parsed.images);
+    return transaction(async tx => {
+      const receipt = async id => {
+        const row = (await tx.request().input('id', sql.UniqueIdentifier, id).query('SELECT Payload FROM dbo.SyncOperations WITH (UPDLOCK,HOLDLOCK) WHERE Id=@id')).recordset[0];
+        return row ? decrypt(row.Payload, key) : null;
+      };
+      const previous = await receipt(op.id);
+      if (previous) return previous;
+      let result;
+      if (op.type === 'note') {
+        let id = op.note.id, revision = op.base.revision;
+        if (op.base.after) {
+          const parent = await receipt(op.base.after);
+          if (!parent?.note) throw new AppError('Falta una operación anterior. Se conservan los cambios locales.', 409);
+          id = parent.note.id; revision = parent.note.revision;
+        }
+        const row = (await tx.request().input('id', sql.NVarChar(128), id).query('SELECT * FROM dbo.Notes WITH (UPDLOCK,HOLDLOCK) WHERE Id=@id')).recordset[0];
+        const old = row ? unpack(row) : null;
+        const conflict = (revision == null && old) || (revision != null && old?.revision !== revision);
+        if (conflict) id = op.conflictId;
+        const cats = await categories(tx);
+        let categoryId = parsed.categoryId;
+        if (!cats.some(c => c.id === categoryId)) {
+          const recovery = cats.find(c => c.name === 'Recuperadas sin conexión');
+          categoryId = recovery?.id || randomUUID();
+          if (!recovery) await tx.request().input('id', sql.NVarChar(128), categoryId).query("INSERT INTO dbo.Categories (Id,Name,Color,SortOrder) VALUES (@id,N'Recuperadas sin conexión','#6b8e7b',999)");
+        }
+        const value = { ...parsed, id, categoryId, title: conflict ? `${parsed.title.slice(0, 264)} (copia por conflicto)` : parsed.title,
+          revision: conflict || !old ? 1 : old.revision + 1, createdAt: conflict || !old ? op.note.createdAt : old.createdAt, updatedAt: op.note.updatedAt, deletedAt: op.note.deletedAt || null };
+        const note = await writeNote(tx, value, Boolean(conflict || !old));
+        result = { note, conflict: Boolean(conflict), originalId: op.note.id, ...(conflict && old ? { originalNote: old } : {}) };
+      } else if (op.type === 'category') {
+        const data = categorySchema.parse(op.category), list = await categories(tx), old = list.find(c => c.id === op.category.id);
+        let id = op.category.id;
+        const sameName = list.find(c => c.id !== id && c.name.toLocaleLowerCase('es') === data.name.toLocaleLowerCase('es'));
+        const conflict = op.base && (!old || old.name !== op.base.name || old.color !== op.base.color);
+        if (sameName && !old && !op.base) result = { category: sameName };
+        else {
+          if (conflict || sameName || (!op.base && old)) {
+            id = op.conflictId; data.name = `${data.name.slice(0, 48)} (copia ${op.id.slice(0, 8)})`;
+          }
+          const req = tx.request().input('id', sql.NVarChar(128), id).input('name', sql.NVarChar(80), data.name).input('color', sql.Char(7), data.color).input('order', sql.Int, data.order);
+          await req.query(id === old?.id ? 'UPDATE dbo.Categories SET Name=@name,Color=@color,SortOrder=@order WHERE Id=@id' : 'INSERT INTO dbo.Categories (Id,Name,Color,SortOrder) VALUES (@id,@name,@color,@order)');
+          result = { category: { ...data, id }, conflict: id !== op.category.id };
+        }
+      } else if (op.type === 'reorder') {
+        const list = await categories(tx), ids = [...op.ids.filter(id => list.some(c => c.id === id)), ...list.filter(c => !op.ids.includes(c.id)).map(c => c.id)];
+        for (const [order, id] of ids.entries()) await tx.request().input('id', sql.NVarChar(128), id).input('order', sql.Int, order).query('UPDATE dbo.Categories SET SortOrder=@order WHERE Id=@id');
+        result = { reordered: true };
+      } else if (op.type === 'deleteCategory') {
+        const list = await categories(tx), old = list.find(c => c.id === op.category.id);
+        const count = (await tx.request().input('id', sql.NVarChar(128), op.category.id).query('SELECT COUNT(*) AS n FROM dbo.Notes WHERE CategoryId=@id')).recordset[0].n;
+        const retained = Boolean(old && (count || list.length <= 1 || old.name !== op.category.name || old.color !== op.category.color));
+        if (old && !retained) await tx.request().input('id', sql.NVarChar(128), old.id).query('DELETE FROM dbo.Categories WHERE Id=@id');
+        result = { retained };
+      } else throw new AppError('Operación de sincronización no compatible.');
+      await tx.request().input('id', sql.UniqueIdentifier, op.id).input('payload', sql.NVarChar(sql.MAX), encrypt(result, key)).query('INSERT INTO dbo.SyncOperations (Id,Payload) VALUES (@id,@payload)');
+      return result;
+    });
+  }
+  return { categories, notes, getNote, createNote, updateNote, saveCategory, reorderCategories, deleteCategory, importData, history, getImage, exportData, syncSnapshot, applySyncOperation };
 }

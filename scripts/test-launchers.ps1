@@ -1,5 +1,5 @@
 # Operational tests: run intentionally; they restart only this checkout's Apuntes.
-# SQL preflight is read-only. No note data, database setup or migrations are performed.
+# Preflight is read-only. No test notes or migrations; ordinary startup can synchronize pending user saves.
 . (Join-Path $PSScriptRoot '..\deploy\windows\common.ps1')
 $taskChecks = [Collections.Generic.List[string]]::new()
 $taskStartBat = Join-Path $script:ProjectRoot 'levantar-proyecto.bat'
@@ -96,7 +96,7 @@ try {
 
   Invoke-TestBat $taskStartBat @('--servidor', '--check') | Out-Null
   Test-Require (@(Get-ApuntesListeners 5179).Count -eq 0) '--check inicio un servicio.'
-  Test-Passed 'Preflight valida SQL y clave sin iniciar procesos'
+  Test-Passed 'Preflight valida almacenamiento y clave sin iniciar procesos'
   $env:APUNTES_PROFILE = 'servidor'
   $env:PORT = '65432'
   Invoke-TestBat $taskStartBat @('--no-browser') | Out-Null

@@ -10,7 +10,7 @@ export const imageSchema = z.object({
 export const noteSchema = z.object({
   title: z.string().trim().min(1, 'Escribe un título.').max(300), content: z.string().max(1000000).default(''),
   format: z.enum(['markdown', 'richtext']).default('markdown'), images: z.array(imageSchema).max(8, 'Hasta 8 imágenes por nota.').default([]),
-  categoryId: z.string().min(1).max(128), status: z.enum(['inbox', 'todo', 'doing', 'done']).default('inbox'),
+  categoryId: z.string().min(1).max(128), status: z.enum(['inbox', 'todo', 'doing', 'review', 'done']).default('inbox'),
   priority: z.enum(['none', 'low', 'medium', 'high']).default('none'),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s => { const d = new Date(s); return !isNaN(d) && d.toISOString().slice(0,10) === s; }).nullable().default(null),

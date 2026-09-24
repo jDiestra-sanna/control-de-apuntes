@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { normalizeImport, noteSchema } from '../server/model.js';
 import { encrypt, decrypt, decryptBackup } from '../server/crypto.js';
 import { encryptBackup } from '../src/backup.js';
-import { calendarDate, calendarDay, filterNotes, localDay } from '../src/utils.js';
+import { calendarDate, calendarDay, filterNotes, localDay, statuses, boardStatuses } from '../src/utils.js';
 
 const legacy = { categories: [{ name: 'Acceso', color: '#ffcc00' }, { name: 'SQL', color: '#6688aa' }], notes: [{ id: 'legacy-1', title: 'Ejemplo áéñ', content: 'SELECT 1;\n-- línea 2', category: 'acceso', tags: ['sql'], createdAt: 1600000000000, updatedAt: 1700000000000, pinned: true, archived: true }] };
 test('calendar dates round-trip without shifting a day and today follows Lima midnight', () => {
@@ -50,6 +50,28 @@ test('schema rejects invalid states, invalid calendar days, empty titles and lon
   const base = { title: 'Nota', categoryId: 'cat' };
   for (const change of [{ status: 'unknown' }, { dueDate: '2026-02-30' }, { title: ' ' }, { tags: ['a'.repeat(41)] }]) assert.equal(noteSchema.safeParse({ ...base, ...change }).success, false);
   assert.equal(noteSchema.safeParse({ ...base, dueDate: '2028-02-29' }).success, true);
+});
+test('all editor statuses persist and import, including validation and legacy inbox', () => {
+  for (const { id: status } of statuses) {
+    assert.equal(noteSchema.parse({ title: 'Nota', categoryId: 'cat', status }).status, status);
+    assert.equal(normalizeImport({ categories: ['General'], notes: [{ title: 'Nota', status }] }).notes[0].status, status);
+  }
+  assert.equal(normalizeImport(legacy).notes[0].status, 'inbox');
+  assert.deepEqual(boardStatuses.map(s => s.name), ['Por hacer', 'En progreso', 'En validación', 'Completado']);
+});
+test('kanban and board views exclude outside notes while the library and filters retain them', () => {
+  const base = { ...noteSchema.parse({ title: 'Nota de trabajo', categoryId: 'cat', tags: ['qa'] }), updatedAt: '2026-01-01', createdAt: '2026-01-01', deletedAt: null };
+  const notes = statuses.map(s => ({ ...base, id: s.id, status: s.id }));
+  notes.push({ ...base, id: 'archived', status: 'review', archived: true }, { ...base, id: 'deleted', status: 'todo', deletedAt: '2026-01-02' });
+  assert.equal(filterNotes(notes, {}).length, 5);
+  assert.deepEqual(filterNotes(notes, { status: 'inbox' }).map(n => n.id), ['inbox']);
+  for (const options of [{ scope: 'kanban' }, { view: 'board' }, { scope: 'category', view: 'board', category: 'cat' }]) {
+    assert.deepEqual(filterNotes(notes, options).map(n => n.id), ['todo', 'doing', 'review', 'done']);
+    assert.deepEqual(filterNotes(notes, { ...options, status: 'review', query: '#qa' }).map(n => n.id), ['review']);
+    assert.equal(filterNotes(notes, { ...options, category: 'other' }).length, 0);
+  }
+  assert.equal(filterNotes(notes, { scope: 'archive' })[0].id, 'archived');
+  assert.equal(filterNotes(notes, { scope: 'trash' })[0].id, 'deleted');
 });
 test('search survives state changes and excludes archived and deleted notes in active views', () => {
   const base = { ...noteSchema.parse({ title: 'Reunión técnica', categoryId: 'cat', content: 'Consulta', tags: ['técnico'] }), id: 'a', updatedAt: '2026-01-01', createdAt: '2026-01-01', deletedAt: null };

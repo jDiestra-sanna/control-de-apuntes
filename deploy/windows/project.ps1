@@ -42,7 +42,7 @@ Puertos fijos: local 3188; servidor 5179. Web y API comparten puerto.
 Ambos escuchan en 127.0.0.1. No se abren firewall ni tuneles.
 Servidor: ejecutar en el host Windows destino con .env y master.key originales.
 Para publicar en red se requiere una capa de acceso autenticado y HTTPS.
---check valida requisitos, puerto, conexion SQL y clave sin iniciar ni compilar.
+--check valida requisitos, puerto, copia local y clave sin iniciar ni compilar.
 --install-dependencies instala el lockfile y termina, sin iniciar ni migrar SQL.
 El inicio normal reutiliza dependencias y compila solo si hay cambios.
 Los registros estan en .local/server-<perfil>.log y server-<perfil>-error.log.
@@ -107,7 +107,7 @@ Los registros estan en .local/server-<perfil>.log y server-<perfil>-error.log.
   if (-not (Test-Path -LiteralPath (Join-Path $script:StateRoot 'master.key'))) { throw 'Falta .local/master.key. Lleva la clave original para abrir la base existente; no generes otra.' }
   $env:PORT = [string]$taskPort
   $taskTargetJson = & $taskNode (Join-Path $script:ProjectRoot 'scripts\check-runtime.js')
-  if ($LASTEXITCODE -ne 0) { throw 'No se pudo validar SQL y la clave. No se inicio ni modifico la base.' }
+  if ($LASTEXITCODE -ne 0) { throw 'No se pudo validar el almacenamiento y la clave. No se inicio el proyecto.' }
   $taskTarget = $taskTargetJson | ConvertFrom-Json
   $taskRuntimeHash = Get-ApuntesRuntimeFingerprint
   $taskBuildHash = Get-ApuntesFingerprint @('src', 'public', 'index.html', 'vite.config.js', 'package.json', 'package-lock.json')
@@ -123,7 +123,7 @@ Los registros estan en .local/server-<perfil>.log y server-<perfil>-error.log.
     return
   }
   if ($taskCheck) {
-    Write-Host "[OK] Perfil $taskProfile. Puerto fijo $taskPort libre. Node $taskVersion. SQL $($taskTarget.server)/$($taskTarget.database) y clave verificados."
+    Write-Host "[OK] Perfil $taskProfile. Puerto fijo $taskPort libre. Node $taskVersion. Almacenamiento $($taskTarget.storage) y clave verificados. Destino SQL: $($taskTarget.server)/$($taskTarget.database)."
     return
   }
   $taskBuildStatePath = Join-Path $script:StateRoot 'build-state.json'
@@ -160,7 +160,7 @@ Los registros estan en .local/server-<perfil>.log y server-<perfil>-error.log.
     Start-Sleep -Milliseconds 500
   }
   if (-not $taskReady) { throw "No se pudo validar la web y API. Revisa $taskErrorLog." }
-  Write-Host "[OK] Apuntes $taskProfile disponible en $taskUrl (PID $($taskChild.Id)). SQL: $($taskTarget.server)/$($taskTarget.database)."
+  Write-Host "[OK] Apuntes $taskProfile disponible en $taskUrl (PID $($taskChild.Id)). Almacenamiento: $($taskTarget.storage). Destino SQL: $($taskTarget.server)/$($taskTarget.database)."
   if (-not $taskNoBrowser -and $taskProfile -eq 'local') { Start-Process $taskUrl }
 } catch {
   $taskExit = 1

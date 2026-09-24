@@ -7,7 +7,7 @@ Los dos archivos de la raíz son `levantar-proyecto.bat` y `cerrar-proyecto.bat`
 | Local | 3188 | http://127.0.0.1:3188 |
 | Servidor Windows | 5179 | http://127.0.0.1:5179 |
 
-No hay un puerto separado para Vite: los lanzadores sirven la compilación React desde Express. Ambos perfiles utilizan la conexión SQL de `.env`; seleccionar «local» no cambia SQL Server a LocalDB ni copia la base. El puerto SQL 1433 es independiente de los puertos HTTP.
+No hay un puerto separado para Vite: los lanzadores sirven la compilación React desde Express. Ambos perfiles utilizan la conexión SQL de `.env` como destino de sincronización. El modo predeterminado guarda primero en `.local/offline/`; los perfiles del mismo checkout comparten copia y bloqueos de escritura/sincronización. El puerto SQL 1433 es independiente de los puertos HTTP.
 
 ## Uso diario
 
@@ -38,7 +38,7 @@ levantar-proyecto.bat --servidor --check
 levantar-proyecto.bat --servidor
 ```
 
-`--check` verifica Node, dependencias, puerto, conexión, tablas y descifrado de una muestra sin mostrar notas, iniciar servicios ni ejecutar migraciones. En una base vacía solo se valida el formato de la clave. El inicio normal tampoco crea bases, tablas ni claves. `npm run db:setup` queda como una operación explícita para aprovisionamiento; no es necesario repetirla al trasladar el cliente hacia la base existente.
+`--check` verifica Node, dependencias, puerto, clave, copia local e integridad de sus imágenes sin necesitar VPN, mostrar notas, iniciar servicios ni ejecutar migraciones. Sin copia previa, el primer inicio indica que necesita VPN para descargarla. `APUNTES_STORAGE=sql` mantiene la comprobación remota del modo anterior. En una base vacía solo se valida el formato de la clave. El inicio normal tampoco crea bases, tablas ni claves. `npm run db:setup` queda como una operación explícita para aprovisionamiento; no es necesario repetirla al trasladar el cliente hacia la base existente.
 
 La instalación es explícita y se rechaza si hay procesos de Apuntes abiertos en este checkout. Un inicio normal reutiliza `node_modules`. Si cambia el código de la interfaz o se pierde/modifica `dist`, recompila antes de iniciar. `--rebuild` fuerza esa compilación con el perfil detenido.
 
@@ -49,6 +49,10 @@ Para actualizar el código en un equipo que ya lo ejecuta, cierra ambos perfiles
 El perfil servidor permite ejecutar el mismo proyecto compilado en un host Windows con puerto fijo **5179**, sin abrir ventanas de consola adicionales. Comprueba la disponibilidad en el equipo donde se ejecuta; la comprobación local no garantiza que ese puerto esté disponible en otro servidor.
 
 La aplicación actual es personal y **escucha en 127.0.0.1 en ambos perfiles**. Se puede utilizar desde el navegador de la sesión del servidor. Para acceso desde otros equipos falta configurar una publicación con autenticación, HTTPS y los hosts/orígenes permitidos de la API. Estos `.bat` no abren firewall, túneles ni acceso anónimo por LAN. Tampoco instalan un servicio Windows ni arranque automático tras reiniciar el equipo.
+
+## Actualización para trabajar sin VPN
+
+Consulta [la guía de sincronización](trabajar-sin-vpn.md). Ejecuta una vez `node scripts/migrate-offline.js` con VPN y ambas instancias cerradas. Crea un respaldo SQL verificado y añade `SyncOperations`, sin cambiar las tablas anteriores. El inicio normal no migra el esquema.
 
 ## Cierre y diagnóstico
 
@@ -62,6 +66,7 @@ Inicio y cierre comparten un bloqueo en `.local/launcher.lock`: si otra operaci�
 | `.local/server-servidor.log` / `server-servidor-error.log` | Salida y errores del perfil servidor |
 | `.local/run-local.json` / `run-servidor.json` | PID, inicio, ruta, puerto y huellas para comprobar la instancia |
 | `.local/build-state.json` | Huella de fuentes y compilación reutilizable |
+| `.local/offline/<destino>/` | Copia cifrada, imágenes y cola persistente; conservar junto con la clave |
 
 Estos archivos están excluidos de Git. Los logs del perfil se reinician en cada arranque efectivo. Un error devuelve código de salida 1; un inicio, comprobación o cierre correcto devuelve 0. Con doble clic, un error mantiene abierta la ventana para leerlo.
 
@@ -71,4 +76,4 @@ Pruebas de operación, con reinicio de Apuntes y restauración del perfil local 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-launchers.ps1
 ```
 
-La suite usa procesos de prueba para verificar colisiones, PID obsoletos, bloqueo y rutas con espacios. Comprueba también ambos perfiles contra la configuración SQL existente mediante consultas de lectura. No ejecuta `db:setup`, no cambia notas y no detiene otros proyectos. Evidencia local: `.local/qa/launchers.json`.
+La suite usa procesos de prueba para verificar colisiones, PID obsoletos, bloqueo y rutas con espacios. Comprueba también ambos perfiles y el almacenamiento configurado. No crea notas de prueba ni ejecuta `db:setup`; el arranque normal puede sincronizar guardados pendientes del usuario. No detiene otros proyectos. Evidencia local: `.local/qa/launchers.json`.

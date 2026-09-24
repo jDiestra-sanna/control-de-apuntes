@@ -34,7 +34,7 @@ export function ConfirmContent({ message, confirmLabel = 'Descartar cambios', ca
   return <div className="confirm-body"><SaMessagebox type="warning" message={message}/><div className="confirm-actions"><SaButton label={cancelLabel} variant="secondary" onClick={onCancel} autoFocus/><SaButton label={confirmLabel} variant="danger" onClick={onConfirm}/></div></div>;
 }
 export function Markdown({ children }) { return <Suspense fallback={<SaSkeleton rows={3} aria-label="Preparando vista previa"/>}><MarkdownContent>{children}</MarkdownContent></Suspense>; }
-export const statusType = { inbox: 'gray', todo: 'warning', doing: 'info', done: 'success' };
+export const statusType = { inbox: 'gray', todo: 'warning', doing: 'info', review: 'info', done: 'success' };
 export function StatusTag({ status }) { return <SaTag type={statusType[status]} size="small" text={statuses.find(s => s.id === status)?.name}/>; }
 export function EmptyState({ title, description, children }) { return <div className="notes-empty"><SaEmptyState title={title} description={description} icon={<FileText size={32}/>}/>{children}</div>; }
 export function LoadingNotes() { return <div className="notes-grid" role="status" aria-label="Cargando apuntes">{[0, 1, 2, 3, 4, 5].map(i => <SaCard key={i}><SaSkeleton width="45%"/><SaSkeleton rows={3}/><SaSkeleton width="65%"/></SaCard>)}</div>; }
