@@ -46,6 +46,10 @@ const DB_CONFIGS = {
       HHMMDRMTest: {
         user: process.env.SQL_USER_HHMM_TEST || 'UsrHHMMDRMTest',
         password: process.env.SQL_PASSWORD_HHMM_TEST || 'HHMMDRMTest'
+      },
+      BD_TI2: {
+        user: process.env.SQL_USER_TI2 || 'sa',
+        password: process.env.SQL_PASSWORD_TI2 || 'Drmas2013'
       }
     }
   }
@@ -189,7 +193,7 @@ export async function executeSolution({ query, engine, database, env = 'prod' })
     return await executePostgreSql({ query, env, database: 'hipocrates' });
   }
 
-  if (cleanEngine.includes('sql server') || cleanDb.includes('sanna') || cleanDb.includes('hhmm') || cleanDb.includes('medisanna')) {
+  if (cleanEngine.includes('sql server') || cleanDb.includes('sanna') || cleanDb.includes('hhmm') || cleanDb.includes('medisanna') || cleanDb.includes('ti2')) {
     return await executeSqlServer({ query, database, env });
   }
 
@@ -211,7 +215,7 @@ export async function testConnection({ engine, database, env = 'prod' }) {
     });
   }
 
-  if (cleanEngine.includes('sql server') || cleanDb.includes('sanna') || cleanDb.includes('hhmm') || cleanDb.includes('medisanna')) {
+  if (cleanEngine.includes('sql server') || cleanDb.includes('sanna') || cleanDb.includes('hhmm') || cleanDb.includes('medisanna') || cleanDb.includes('ti2')) {
     return await executeSqlServer({
       query: 'SELECT DB_NAME() AS db, SUSER_SNAME() AS usuario, @@VERSION AS version;',
       database,

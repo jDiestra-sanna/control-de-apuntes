@@ -11,6 +11,7 @@ import { diskStore, offlineDirectory } from './offline-store.js';
 import { offlineRepository } from './offline-repository.js';
 import { synchronizer } from './offline-sync.js';
 import { executeSolution, testConnection } from './solutions-executor.js';
+import * as sysMods from './system-modules.js';
 
 const dev = process.argv.includes('--dev');
 const port = Number(process.env.PORT || 3188);
@@ -77,6 +78,97 @@ app.post('/api/solutions/test-connection', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// Rutas operativas de módulos extraídos del SISTEMA INTEGRADO DE TI
+app.get('/api/modules/users/next-code', async (req, res) => {
+  try { res.json(await sysMods.getNextUserCode(req.query.env)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/modules/users/check-username', async (req, res) => {
+  try { res.json(await sysMods.checkUsernameAvailability(req.query.username, req.query.env)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/modules/users/profiles', async (req, res) => {
+  try { res.json(await sysMods.getProfiles(req.query.env)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/users/create', async (req, res) => {
+  try { res.json(await sysMods.createUser(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/modules/users/list', async (req, res) => {
+  try { res.json(await sysMods.listUsers(req.query)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/users/toggle-status', async (req, res) => {
+  try { res.json(await sysMods.toggleUserStatus(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/users/reset-password', async (req, res) => {
+  try { res.json(await sysMods.resetUserPassword(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/modules/users/permissions', async (req, res) => {
+  try { res.json(await sysMods.getUserPermissions(req.query)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/modules/users/available-permissions', async (req, res) => {
+  try { res.json(await sysMods.getAvailablePermissions(req.query)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/users/assign-permissions', async (req, res) => {
+  try { res.json(await sysMods.assignPermissions(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/users/remove-permission', async (req, res) => {
+  try { res.json(await sysMods.removePermission(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/ambulance/query', async (req, res) => {
+  try { res.json(await sysMods.queryAmbulance(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/ambulance/update-date', async (req, res) => {
+  try { res.json(await sysMods.updateAmbulanceDate(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/laboratory/query', async (req, res) => {
+  try { res.json(await sysMods.queryLabOrders(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/laboratory/update', async (req, res) => {
+  try { res.json(await sysMods.updateLabOrders(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/delivery/query', async (req, res) => {
+  try { res.json(await sysMods.queryDeliveryOrders(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/delivery/update', async (req, res) => {
+  try { res.json(await sysMods.updateDeliveryOrders(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/facturacion-hyg/query', async (req, res) => {
+  try { res.json(await sysMods.queryFacturacionHYG(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/facturacion-hyg/update', async (req, res) => {
+  try { res.json(await sysMods.updateFacturacionHYG(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/special/subzona', async (req, res) => {
+  try { res.json(await sysMods.updateSubzona(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/special/mpos', async (req, res) => {
+  try { res.json(await sysMods.updateMedioPagoMPOS(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/modules/special/descuento', async (req, res) => {
+  try { res.json(await sysMods.queryDescuentoTrabajador(req.body)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 app.use('/api', (req, res) => res.status(404).json({ error: 'Ruta no encontrada.' }));
 if (dev) {
   const { createServer } = await import('vite');

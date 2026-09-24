@@ -37,6 +37,7 @@ import {
   ENGINES_LIST,
   CATEGORIES_LIST
 } from './solutions-data.js';
+import IntegratedModules from './IntegratedModules.jsx';
 
 export default function SolutionsView({ onNewNote, notify }) {
   const [activeTab, setActiveTab] = useState('tickets');
@@ -413,6 +414,18 @@ ${sol.notes ? `> [!NOTE] Notas de Seguridad
         {/* Pestañas de navegación */}
         <div className="solutions-nav-tabs" role="tablist">
           <button
+            className={`sol-tab-btn ${activeTab === 'integrated_modules' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('integrated_modules'); setActiveTag(''); }}
+            role="tab"
+            aria-selected={activeTab === 'integrated_modules'}
+            style={activeTab === 'integrated_modules' ? { borderColor: '#0f4c81', color: '#0f4c81' } : {}}
+          >
+            <Layers size={16} style={{ color: '#0f4c81' }} />
+            <span>Módulos Operativos (Sistema TI)</span>
+            <span className="sol-tab-badge" style={{ background: '#0f4c81', color: '#fff' }}>6 MÓDULOS</span>
+          </button>
+
+          <button
             className={`sol-tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
             onClick={() => { setActiveTab('tickets'); setActiveTag(''); }}
             role="tab"
@@ -467,6 +480,11 @@ ${sol.notes ? `> [!NOTE] Notas de Seguridad
           </button>
         </div>
       </div>
+
+      {/* PESTAÑA: MÓDULOS OPERATIVOS DEL SISTEMA INTEGRADO DE TI */}
+      {activeTab === 'integrated_modules' && (
+        <IntegratedModules notify={notify} />
+      )}
 
       {/* PESTAÑA 1 & 2: TICKETS RECURRENTES & QUERY + FUNCIONES */}
       {(activeTab === 'tickets' || activeTab === 'query_funciones') && (
